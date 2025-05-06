@@ -43,4 +43,23 @@ document.addEventListener('DOMContentLoaded', function() {
       console.error('Error removing duplicate tabs:', error);
     }
   });
+
+  const mergeWindowsButton = document.getElementById('mergeWindows');
+
+  mergeWindowsButton.addEventListener('click', async () => {
+    try {
+      // Get the current window
+      const currentWindow = await chrome.windows.getCurrent();
+      // Get all tabs in all windows
+      const allTabs = await chrome.tabs.query({});
+      // Filter tabs that are not in the current window
+      const tabsToMove = allTabs.filter(tab => tab.windowId !== currentWindow.id);
+      // Move each tab to the current window
+      for (const tab of tabsToMove) {
+        await chrome.tabs.move(tab.id, { windowId: currentWindow.id, index: -1 });
+      }
+    } catch (error) {
+      console.error('Error merging windows:', error);
+    }
+  });
 }); 

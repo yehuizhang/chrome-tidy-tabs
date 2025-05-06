@@ -19,12 +19,19 @@ h1 {
 }
 
 .button-container {
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 button {
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   padding: 10px;
+  width: 100%;
   background-color: #4285f4;
   color: white;
   border: none;
