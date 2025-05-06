@@ -21,4 +21,26 @@ document.addEventListener('DOMContentLoaded', function() {
       console.error('Error sorting tabs:', error);
     }
   });
+
+  const removeDuplicatesButton = document.getElementById('removeDuplicates');
+
+  removeDuplicatesButton.addEventListener('click', async () => {
+    try {
+      const tabs = await chrome.tabs.query({ currentWindow: true });
+      const seenUrls = new Set();
+      const duplicateTabIds = [];
+      for (const tab of tabs) {
+        if (seenUrls.has(tab.url)) {
+          duplicateTabIds.push(tab.id);
+        } else {
+          seenUrls.add(tab.url);
+        }
+      }
+      if (duplicateTabIds.length > 0) {
+        await chrome.tabs.remove(duplicateTabIds);
+      }
+    } catch (error) {
+      console.error('Error removing duplicate tabs:', error);
+    }
+  });
 }); 
