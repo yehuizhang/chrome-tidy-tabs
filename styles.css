@@ -20,24 +20,25 @@ h1 {
 
 .button-container {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: row;
+  gap: 16px;
+  justify-content: center;
 }
 
-button {
+.button-container button {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 4px;
   padding: 10px;
-  width: 100%;
+  width: 100px;
   background-color: #4285f4;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 2px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   transition: background-color 0.2s;
 }
 
@@ -47,4 +48,13 @@ button:hover {
 
 button:active {
   background-color: #2a56c6;
-} 
+}
+
+button span {
+  white-space: nowrap;
+}
+button img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
