@@ -12,10 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const titleB = b.title.toLowerCase();
         return titleA.localeCompare(titleB);
       });
-      
-      // Move each tab to its new position
-      for (let i = 0; i < sortedTabs.length; i++) {
-        await chrome.tabs.move(sortedTabs[i].id, { index: i });
+      for (let i = sortedTabs.length - 1; i >= 0; i--) {
+       await chrome.tabs.move(sortedTabs[i].id, { index: i });
       }
     } catch (error) {
       console.error('Error sorting tabs:', error);
