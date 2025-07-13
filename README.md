@@ -16,3 +16,6 @@ magick Screenshot-1.png -resize 1280x800 -background white -gravity center -exte
 ```sh
 zip -r tidy_tabs.zip src manifest.json
 ```
+
+### Chrome extension console
+https://chrome.google.com/webstore/devconsole
