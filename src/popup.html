@@ -1,33 +1,40 @@
 <!doctype html>
 <html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
 
-<head>
-  <meta charset="utf-8" />
-  <link rel="stylesheet" href="styles.css">
-</head>
+  <body>
+    <div class="button-container">
+      <button id="sortTabs" class="icon-button" data-tooltip="Sort">
+        <img src="assets/sort-128.png" alt="Sort" />
+      </button>
+      <button
+        id="removeDuplicates"
+        class="icon-button"
+        data-tooltip="De-Duplicate"
+      >
+        <img src="assets/deduplicate-128.png" alt="De-Duplicate" />
+      </button>
+      <button id="mergeWindows" class="icon-button" data-tooltip="Merge">
+        <img src="assets/merge-128.png" alt="Merge" />
+      </button>
+    </div>
 
-<body>
-  <div class="button-container">
-    <button id="sortTabs" class="icon-button" data-tooltip="Sort">
-      <img src="assets/sort-128.png" alt="Sort" />
-    </button>
-    <button id="removeDuplicates" class="icon-button" data-tooltip="De-Duplicate">
-      <img src="assets/deduplicate-128.png" alt="De-Duplicate" />
-    </button>
-    <button id="mergeWindows" class="icon-button" data-tooltip="Merge">
-      <img src="assets/merge-128.png" alt="Merge" />
-    </button>
-  </div>
+    <div class="search-container">
+      <input
+        type="text"
+        id="searchBox"
+        placeholder="Search bookmarks..."
+        autocomplete="off"
+      />
+    </div>
 
-  <div class="search-container">
-    <input type="text" id="searchBox" placeholder="Search bookmarks..." autocomplete="off" />
-  </div>
+    <div class="results-container">
+      <div id="results"></div>
+    </div>
 
-  <div class="results-container">
-    <div id="results"></div>
-  </div>
-
-  <script src="popup.js"></script>
-</body>
-
+    <script src="popup.js"></script>
+  </body>
 </html>

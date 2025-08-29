@@ -1,13 +1,13 @@
 export class KeyboardHandler {
   constructor(
-    private onEnter: () => void,
+    private onEnter: () => void | Promise<void>,
     private onArrowDown: () => void,
     private onArrowUp: () => void,
     private onEscape: () => void
   ) {}
 
   handleKeyDown = (e: KeyboardEvent): void => {
-    const actions: Record<string, () => void> = {
+    const actions: Record<string, () => void | Promise<void>> = {
       Enter: () => {
         e.preventDefault();
         this.onEnter();

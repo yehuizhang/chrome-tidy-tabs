@@ -34,3 +34,13 @@ export const flattenBookmarks = (bookmarks: IBookmark[]) =>
     if (b.children) acc.push(...flattenBookmarks(b.children));
     return acc;
   }, []);
+
+export const normalizeUrl = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname + urlObj.pathname;
+  } catch {
+    console.warn('Invalid URL for normalization:', url);
+    return url; // Fallback to original URL if parsing fails
+  }
+};
