@@ -1,26 +1,247 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <title>Tab Sorter</title>
-  <link rel="stylesheet" type="text/css" href="styles.css">
-</head>
-<body>
-  <div class="container">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        width: 420px;
+        min-height: 80px;
+        max-height: 600px;
+        padding: 20px;
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, F8F9FA_1 0%, FFFFFF_1 100%);
+        overflow: hidden;
+        box-sizing: border-box;
+        border-radius: 12px;
+      }
+
+      .button-container {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        justify-content: space-between;
+      }
+
+      .button-container button {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 8px;
+        border: 2px solid #e8eaed;
+        border-radius: 12px;
+        background: #ffffff;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 12px;
+        font-weight: 500;
+        color: #202124;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      }
+
+      .button-container button:hover {
+        border-color: #4285f4;
+        background: #f8f9fa;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(66, 133, 244, 0.15);
+      }
+
+      .button-container button:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
+      }
+
+      .button-container button img {
+        width: 24px;
+        height: 24px;
+        opacity: 0.8;
+      }
+
+      .button-container button:hover img {
+        opacity: 1;
+      }
+
+      .search-container {
+        margin-bottom: 16px;
+      }
+
+      #searchBox {
+        width: 100%;
+        padding: 14px 16px;
+        border: 2px solid E8EAED_1;
+        border-radius: 12px;
+        font-size: 14px;
+        outline: none;
+        box-sizing: border-box;
+        background: FFFFFF_1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        transition: all 0.2s ease;
+      }
+
+      #searchBox:focus {
+        border-color: 4285F4_1;
+        box-shadow: 0 2px 12px rgba(66, 133, 244, 0.15);
+        transform: translateY(-1px);
+      }
+
+      .results-container {
+        overflow-y: auto;
+        scrollbar-width: thin; /* Firefox */
+        border-radius: 10px;
+        background: FFFFFF_1;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      }
+
+      .results-container::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .results-container::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 3px;
+      }
+
+      .results-container::-webkit-scrollbar-thumb {
+        background: rgba(95, 99, 104, 0.2);
+        border-radius: 3px;
+      }
+
+      .results-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(95, 99, 104, 0.4);
+      }
+
+      .bookmark-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid F1F3F4_1;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        gap: 12px;
+        position: relative;
+      }
+
+      .bookmark-item:last-child {
+        border-bottom: none;
+        border-radius: 0 0 10px 10px;
+      }
+
+      .bookmark-item:first-child {
+        border-radius: 10px 10px 0 0;
+      }
+
+      .bookmark-item:only-child {
+        border-radius: 10px;
+      }
+
+      .bookmark-item:hover {
+        background: linear-gradient(135deg, F8F9FA_1 0%, E8F0FE_1 100%);
+        transform: translateX(4px);
+        box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
+      }
+
+      .bookmark-item:active {
+        transform: translateX(2px) scale(0.98);
+      }
+
+      .bookmark-item.selected {
+        background: linear-gradient(135deg, E8F0FE_1 0%, D2E3FC_1 100%);
+        transform: translateX(4px);
+        box-shadow: 0 2px 8px rgba(66, 133, 244, 0.15);
+        border-left: 3px solid 4285F4_1;
+      }
+
+      .bookmark-favicon {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      .bookmark-content {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .bookmark-title {
+        font-weight: 500;
+        color: 202124_1;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0;
+        max-width: 160px;
+        line-height: 1.4;
+      }
+
+      .bookmark-url {
+        color: 5F6368_1;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+        min-width: 0;
+        opacity: 0.8;
+        line-height: 1.3;
+      }
+
+      .no-results {
+        text-align: center;
+        color: 5F6368_1;
+        padding: 40px 20px;
+        font-size: 14px;
+        border-radius: 10px;
+        background: FFFFFF_1;
+      }
+
+      .loading {
+        text-align: center;
+        color: 5F6368_1;
+        padding: 20px;
+        font-size: 14px;
+        border-radius: 10px;
+        background: FFFFFF_1;
+      }
+    </style>
+  </head>
+  <body>
     <div class="button-container">
       <button id="sortTabs">
-        <img src="icons/sort-128.png" alt="Sort">
+        <img src="assets/sort-128.png" alt="Sort" />
         <span>Sort</span>
       </button>
       <button id="removeDuplicates">
-        <img src="icons/deduplicate-128.png" alt="De-Duplicate">
+        <img src="assets/deduplicate-128.png" alt="De-Duplicate" />
         <span>De-Duplicate</span>
       </button>
       <button id="mergeWindows">
-        <img src="icons/merge-128.png" alt="Merge">
+        <img src="assets/merge-128.png" alt="Merge" />
         <span>Merge</span>
       </button>
     </div>
-  </div>
-  <script src="popup.js"></script>
-</body>
+
+    <div class="search-container">
+      <input
+        type="text"
+        id="searchBox"
+        placeholder="Search bookmarks..."
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="results-container">
+      <div id="results"></div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
 </html>

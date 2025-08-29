@@ -1,0 +1,46 @@
+{
+  "name": "chrome-tidy-tabs",
+  "version": "1.0.3",
+  "description": "Chrome Store page <https://chromewebstore.google.com/detail/okbadkbpgkcfinhemgigmlooijflihha>",
+  "main": "dist/popup.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "npm run format && npm run lint && npm run build:fast",
+    "build:fast": "npm run clean && webpack --mode=production",
+    "clean": "rm -rf dist",
+    "dev": "webpack --mode=development --watch",
+    "lint": "eslint \"src/**/*.{js,ts}\"",
+    "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix",
+    "format": "prettier --write src/**/*.{ts,html,css}",
+    "format:check": "prettier --check src/**/*.{ts,html,css}"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yehuizhang/chrome-tidy-tabs.git"
+  },
+  "author": "Yehui Zhang",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yehuizhang/chrome-tidy-tabs/issues"
+  },
+  "homepage": "https://github.com/yehuizhang/chrome-tidy-tabs#readme",
+  "dependencies": {
+    "fuse.js": "^7.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "chrome-types": "^0.1.374",
+    "copy-webpack-plugin": "^13.0.1",
+    "eslint": "^9.34.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.41.0",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^6.0.1"
+  }
+}
