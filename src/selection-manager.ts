@@ -1,46 +1,75 @@
 import { IBookmark } from './types';
 
 export class SelectionManager {
-  private selectedIndex = -1;
+    private selectedIndex = -1;
 
-  get currentIndex(): number {
-    return this.selectedIndex;
-  }
-
-  reset(): void {
-    this.selectedIndex = -1;
-  }
-
-  move(direction: number, itemCount: number): void {
-    if (itemCount == 0) return;
-
-    const newIndex = this.selectedIndex + direction;
-
-    if (newIndex >= 0 && newIndex < itemCount) {
-      this.selectedIndex = newIndex;
-    } else if (direction > 0 && this.selectedIndex + 1 === itemCount) {
-      this.selectedIndex = 0; // wrap to top
-    } else if (direction < 0 && this.selectedIndex <= 0) {
-      this.selectedIndex = itemCount - 1; // wrap to bottom
+    get currentIndex(): number {
+        return this.selectedIndex;
     }
-  }
 
-  setIndex(index: number): void {
-    this.selectedIndex = index;
-  }
+    reset(): void {
+        this.selectedIndex = -1;
+    }
 
-  getSelectedBookmark(bookmarks: IBookmark[]): IBookmark | null {
-    return (
-      (this.selectedIndex >= 0 && this.selectedIndex < bookmarks.length
-        ? bookmarks[this.selectedIndex]
-        : bookmarks[0]) ?? null
-    );
-  }
+    setIndex(index: number): void {
+        this.selectedIndex = index;
+    }
 
-  updateVisualSelection(container: HTMLElement): void {
-    const items = container.querySelectorAll('.bookmark-item');
-    items.forEach((item, index) => {
-      item.classList.toggle('selected', index === this.selectedIndex);
-    });
-  }
+    getSelectedBookmark(bookmarks: IBookmark[]): IBookmark | null {
+        return (
+            (this.selectedIndex >= 0 && this.selectedIndex < bookmarks.length
+                ? bookmarks[this.selectedIndex]
+                : bookmarks[0]) ?? null
+        );
+    }
+
+    updateVisualSelection(container: HTMLElement): void {
+        const items = container.querySelectorAll('.bookmark-item');
+        console.log(`updateVisualSelection: found ${items.length} items, selectedIndex: ${this.selectedIndex}`);
+
+        items.forEach((item, index) => {
+            const isSelected = index === this.selectedIndex;
+            item.classList.toggle('selected', isSelected);
+
+            // Scroll selected item into view
+            if (isSelected) {
+                // Use scrollIntoView with more specific options
+                (item as HTMLElement).scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'nearest'
+                });
+            }
+        });
+    }
+
+    moveWithContainer(direction: number, container: HTMLElement): void {
+        const items = container.querySelectorAll('.bookmark-item');
+        const itemCount = items.length;
+        console.log(`moveWithContainer: direction:${direction} itemCount:${itemCount} (from DOM)`);
+        
+        if (itemCount === 0) {
+            this.selectedIndex = -1;
+            return;
+        }
+
+        // Initialize selection if none exists
+        if (this.selectedIndex === -1) {
+            this.selectedIndex = direction > 0 ? 0 : itemCount - 1;
+            this.updateVisualSelection(container);
+            return;
+        }
+
+        let newIndex = this.selectedIndex + direction;
+
+        // Handle wrapping
+        if (newIndex >= itemCount) {
+            newIndex = 0; // Wrap to first item
+        } else if (newIndex < 0) {
+            newIndex = itemCount - 1; // Wrap to last item
+        }
+
+        this.selectedIndex = newIndex;
+        this.updateVisualSelection(container);
+    }
 }
