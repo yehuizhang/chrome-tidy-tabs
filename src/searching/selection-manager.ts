@@ -1,4 +1,4 @@
-import { IBookmark } from './types';
+import { IBookmarkTreeNode } from './types';
 
 export class SelectionManager {
   private selectedIndex = -1;
@@ -15,7 +15,9 @@ export class SelectionManager {
     this.selectedIndex = index;
   }
 
-  getSelectedBookmark(bookmarks: IBookmark[]): IBookmark | null {
+  getSelectedBookmark(
+    bookmarks: IBookmarkTreeNode[]
+  ): IBookmarkTreeNode | null {
     return (
       (this.selectedIndex >= 0 && this.selectedIndex < bookmarks.length
         ? bookmarks[this.selectedIndex]

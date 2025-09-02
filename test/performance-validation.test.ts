@@ -3,22 +3,33 @@
  * Tests system performance with large datasets and high-frequency operations
  */
 
-import { ClickTracker } from '../src/click-tracker';
-import { SearchScorer } from '../src/search-scorer';
-import { StorageManager } from '../src/storage-manager';
-import { ISearchResult, IClickData } from '../src/types';
+import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
+import { SearchScorer } from '../src/searching/search-scorer';
+import { ISearchResult, IClickData, IBookmarkTreeNode } from '../src/searching/types';
 import { mockChromeStorage } from './setup';
 
+// Helper function to create mock bookmark nodes
+function createMockBookmark(id: string, title: string, url: string): IBookmarkTreeNode {
+  return {
+    id,
+    title,
+    url,
+    index: 0,
+    dateAdded: Date.now(),
+    dateGroupModified: Date.now(),
+    parentId: 'root',
+    syncing: false,
+  } as IBookmarkTreeNode;
+}
+
 describe('Performance Validation Tests', () => {
-  let clickTracker: ClickTracker;
+  let storageManager: EnhancedStorageManager;
   let searchScorer: SearchScorer;
-  let storageManager: StorageManager;
 
   beforeEach(() => {
-    clickTracker = new ClickTracker();
-    clickTracker.enableTestMode();
+    storageManager = new EnhancedStorageManager();
+    storageManager.enableTestMode();
     searchScorer = new SearchScorer();
-    storageManager = new StorageManager();
     jest.clearAllMocks();
     
     mockChromeStorage.sync.get.mockResolvedValue({});
@@ -42,11 +53,7 @@ describe('Performance Validation Tests', () => {
       const searchResults: ISearchResult[] = [];
       for (let i = 0; i < 500; i++) {
         searchResults.push({
-          item: {
-            id: `${i}`,
-            title: `Bookmark ${i}`,
-            url: `https://site${i}.com/path${i % 100}`,
-          },
+          item: createMockBookmark(`${i}`, `Bookmark ${i}`, `https://site${i}.com/path${i % 100}`),
           score: Math.random(),
         });
       }
@@ -75,7 +82,7 @@ describe('Performance Validation Tests', () => {
     });
 
     it('should maintain performance with frequent click recording', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const urls = Array.from({ length: 100 }, (_, i) => `https://site${i}.com`);
       const totalClicks = 1000;
@@ -88,7 +95,7 @@ describe('Performance Validation Tests', () => {
         const batch = [];
         for (let j = 0; j < batchSize && i + j < totalClicks; j++) {
           const url = urls[(i + j) % urls.length]!;
-          batch.push(clickTracker.recordClick(url));
+          batch.push(storageManager.recordClick(url));
         }
         await Promise.all(batch);
       }
@@ -99,8 +106,8 @@ describe('Performance Validation Tests', () => {
       expect(endTime - startTime).toBeLessThan(500);
       
       // Verify clicks were recorded correctly
-      expect(clickTracker.getClickCount(urls[0]!)).toBe(10); // 1000 clicks / 100 URLs = 10 each
-      expect(clickTracker.getClickCount(urls[50]!)).toBe(10);
+      expect(storageManager.getClickCount(urls[0]!)).toBe(10); // 1000 clicks / 100 URLs = 10 each
+      expect(storageManager.getClickCount(urls[50]!)).toBe(10);
     });
 
     it('should handle memory efficiently with large click datasets', async () => {
@@ -119,7 +126,7 @@ describe('Performance Validation Tests', () => {
       });
 
       const startTime = performance.now();
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       const loadEndTime = performance.now();
 
       // Loading should be reasonably fast even with large dataset
@@ -127,18 +134,14 @@ describe('Performance Validation Tests', () => {
 
       // Test search performance with loaded data
       const searchResults: ISearchResult[] = Array.from({ length: 1000 }, (_, i) => ({
-        item: {
-          id: `${i}`,
-          title: `Bookmark ${i}`,
-          url: `https://domain${i}.com/`,
-        },
+        item: createMockBookmark(`${i}`, `Bookmark ${i}`, `https://domain${i}.com/`),
         score: Math.random(),
       }));
 
       const searchStartTime = performance.now();
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
       const searchEndTime = performance.now();
 
@@ -176,7 +179,7 @@ describe('Performance Validation Tests', () => {
 
   describe('Concurrent Operations Performance', () => {
     it('should handle concurrent click recording without data corruption', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const urls = [
         'https://github.com',
@@ -192,7 +195,7 @@ describe('Performance Validation Tests', () => {
       // Create many concurrent click operations
       for (let i = 0; i < concurrentOperations; i++) {
         const url = urls[i % urls.length]!;
-        operations.push(clickTracker.recordClick(url));
+        operations.push(storageManager.recordClick(url));
       }
 
       await Promise.all(operations);
@@ -207,7 +210,7 @@ describe('Performance Validation Tests', () => {
       
       for (let i = 0; i < urls.length; i++) {
         const expectedCount = expectedClicksPerUrl + (i < remainder ? 1 : 0);
-        expect(clickTracker.getClickCount(urls[i]!)).toBe(expectedCount);
+        expect(storageManager.getClickCount(urls[i]!)).toBe(expectedCount);
       }
     });
 
@@ -221,11 +224,7 @@ describe('Performance Validation Tests', () => {
       }
 
       const searchResults: ISearchResult[] = Array.from({ length: 100 }, (_, i) => ({
-        item: {
-          id: `${i}`,
-          title: `Bookmark ${i}`,
-          url: `https://site${i}.com/`,
-        },
+        item: createMockBookmark(`${i}`, `Bookmark ${i}`, `https://site${i}.com/`),
         score: Math.random(),
       }));
 
@@ -258,14 +257,14 @@ describe('Performance Validation Tests', () => {
 
   describe('Memory Usage Optimization', () => {
     it('should not leak memory during repeated operations', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const initialMemory = process.memoryUsage().heapUsed;
       const iterations = 1000;
 
       // Perform many click operations
       for (let i = 0; i < iterations; i++) {
-        await clickTracker.recordClick(`https://site${i % 10}.com`);
+        await storageManager.recordClick(`https://site${i % 10}.com`);
         
         // Occasionally check memory hasn't grown excessively
         if (i % 100 === 0) {
@@ -329,7 +328,7 @@ describe('Performance Validation Tests', () => {
 
   describe('Real-world Usage Simulation', () => {
     it('should handle typical user behavior patterns efficiently', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Simulate realistic user behavior over time
       const popularSites = [
@@ -354,19 +353,19 @@ describe('Performance Validation Tests', () => {
       // Popular sites: 60% of clicks
       for (let i = 0; i < 300; i++) {
         const site = popularSites[i % popularSites.length]!;
-        await clickTracker.recordClick(site);
+        await storageManager.recordClick(site);
       }
 
       // Occasional sites: 30% of clicks
       for (let i = 0; i < 150; i++) {
         const site = occasionalSites[i % occasionalSites.length]!;
-        await clickTracker.recordClick(site);
+        await storageManager.recordClick(site);
       }
 
       // Rare sites: 10% of clicks
       for (let i = 0; i < 50; i++) {
         const site = rareSites[i % rareSites.length]!;
-        await clickTracker.recordClick(site);
+        await storageManager.recordClick(site);
       }
 
       const clickingEndTime = performance.now();
@@ -374,18 +373,14 @@ describe('Performance Validation Tests', () => {
       // Now simulate search operations
       const allSites = [...popularSites, ...occasionalSites, ...rareSites];
       const searchResults: ISearchResult[] = allSites.map((url, index) => ({
-        item: {
-          id: `${index}`,
-          title: `Site ${index}`,
-          url,
-        },
+        item: createMockBookmark(`${index}`, `Site ${index}`, url),
         score: Math.random(),
       }));
 
       const searchStartTime = performance.now();
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
       const searchEndTime = performance.now();
 
@@ -404,7 +399,7 @@ describe('Performance Validation Tests', () => {
       
       // Popular sites should have higher click counts
       for (const site of popularSites) {
-        expect(clickTracker.getClickCount(site)).toBeGreaterThan(50);
+        expect(storageManager.getClickCount(site)).toBeGreaterThan(50);
       }
     });
 
@@ -425,7 +420,7 @@ describe('Performance Validation Tests', () => {
         webpage_click_data: existingData,
       });
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Simulate user activity throughout session
       const sessionOperations = [];
@@ -434,24 +429,20 @@ describe('Performance Validation Tests', () => {
       for (let i = 0; i < 100; i++) {
         // Record some clicks
         sessionOperations.push(
-          clickTracker.recordClick(`https://session${i % 20}.com`)
+          storageManager.recordClick(`https://session${i % 20}.com`)
         );
 
         // Perform some searches every 10 operations
         if (i % 10 === 0) {
           const searchResults: ISearchResult[] = Array.from({ length: 20 }, (_, j) => ({
-            item: {
-              id: `${j}`,
-              title: `Bookmark ${j}`,
-              url: `https://session${j}.com`,
-            },
+            item: createMockBookmark(`${j}`, `Bookmark ${j}`, `https://session${j}.com`),
             score: Math.random(),
           }));
 
           sessionOperations.push(
             Promise.resolve(searchScorer.enhanceSearchResults(
               searchResults,
-              clickTracker.getAllClickData()
+              storageManager.getAllClickData()
             ))
           );
         }
@@ -464,7 +455,7 @@ describe('Performance Validation Tests', () => {
       expect(sessionEndTime - sessionStartTime).toBeLessThan(2000); // < 2 seconds
 
       // Verify session data is properly maintained
-      expect(clickTracker.getClickCount('https://session0.com')).toBe(5); // 100 clicks / 20 URLs = 5 each
+      expect(storageManager.getClickCount('https://session0.com')).toBe(5); // 100 clicks / 20 URLs = 5 each
     });
   });
 });

@@ -1,7 +1,6 @@
-import { ClickTracker } from '../src/click-tracker';
-import { SearchScorer } from '../src/search-scorer';
-import { StorageManager } from '../src/storage-manager';
-import { IClickData, ISearchResult } from '../src/types';
+import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
+import { SearchScorer } from '../src/searching/search-scorer';
+import { IClickData, ISearchResult } from '../src/searching/types';
 
 // Mock Chrome APIs
 const mockChrome = {
@@ -22,12 +21,12 @@ const mockChrome = {
 (global as any).chrome = mockChrome;
 
 describe('Error Handling Tests', () => {
-  let clickTracker: ClickTracker;
+  let storageManager: EnhancedStorageManager;
   let searchScorer: SearchScorer;
 
   beforeEach(() => {
-    clickTracker = new ClickTracker();
-    clickTracker.enableTestMode();
+    storageManager = new EnhancedStorageManager();
+    storageManager.enableTestMode();
     searchScorer = new SearchScorer();
     jest.clearAllMocks();
   });
@@ -37,26 +36,26 @@ describe('Error Handling Tests', () => {
       // Mock storage as unavailable
       (global as any).chrome = undefined;
       
-      const tracker = new ClickTracker();
-      tracker.enableTestMode();
-      await tracker.loadClickData();
+      const storageManager = new EnhancedStorageManager();
+      storageManager.enableTestMode();
+      await storageManager.loadClickData();
       
       // Should not throw and should work with empty data
-      expect(tracker.getClickCount('https://example.com')).toBe(0);
-      expect(tracker.getAllClickData()).toEqual({});
+      expect(storageManager.getClickCount('https://example.com')).toBe(0);
+      expect(storageManager.getAllClickData()).toEqual({});
     });
 
     it('should handle storage errors during load', async () => {
       const storageError = new Error('Storage failed');
       mockChrome.storage.sync.get.mockRejectedValue(storageError);
 
-      const tracker = new ClickTracker();
-      tracker.enableTestMode();
-      await tracker.loadClickData();
+      const storageManager = new EnhancedStorageManager();
+      storageManager.enableTestMode();
+      await storageManager.loadClickData();
       
       // Should handle error gracefully and continue with empty data
-      expect(tracker.getClickCount('https://example.com')).toBe(0);
-      expect(tracker.getAllClickData()).toEqual({});
+      expect(storageManager.getClickCount('https://example.com')).toBe(0);
+      expect(storageManager.getAllClickData()).toEqual({});
     });
 
     it('should handle corrupted click data', async () => {
@@ -73,10 +72,10 @@ describe('Error Handling Tests', () => {
 
       mockChrome.storage.sync.get.mockResolvedValue(corruptedData);
 
-      const tracker = new ClickTracker();
-      tracker.enableTestMode();
-      await tracker.loadClickData();
-      const allData = tracker.getAllClickData();
+      const storageManager = new EnhancedStorageManager();
+      storageManager.enableTestMode();
+      await storageManager.loadClickData();
+      const allData = storageManager.getAllClickData();
 
       // Debug what we actually got
       console.log('Actual data keys:', Object.keys(allData));
@@ -96,11 +95,11 @@ describe('Error Handling Tests', () => {
         webpage_click_data: {},
       });
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       // This should return immediately without waiting for storage
       const startTime = Date.now();
-      await clickTracker.recordClick('https://example.com');
+      await storageManager.recordClick('https://example.com');
       const endTime = Date.now();
 
       expect(endTime - startTime).toBeLessThan(100); // Should be very fast
@@ -113,19 +112,19 @@ describe('Error Handling Tests', () => {
         webpage_click_data: {},
       });
 
-      const tracker = new ClickTracker();
-      tracker.enableTestMode();
-      await tracker.loadClickData();
+      const storageManager = new EnhancedStorageManager();
+      storageManager.enableTestMode();
+      await storageManager.loadClickData();
       
       // Ensure chrome is available for this test
       (global as any).chrome = mockChrome;
       
       // Even if recording fails, it should not throw
-      await expect(tracker.recordClick('https://example.com')).resolves.not.toThrow();
+      await expect(storageManager.recordClick('https://example.com')).resolves.not.toThrow();
       
       // The click should be recorded in memory even if storage fails
       // Since recordClick now uses async save, the click count should be updated immediately in memory
-      expect(tracker.getClickCount('https://example.com')).toBe(1);
+      expect(storageManager.getClickCount('https://example.com')).toBe(1);
     });
 
     it('should handle storage unavailable during record', async () => {
@@ -133,13 +132,13 @@ describe('Error Handling Tests', () => {
         webpage_click_data: {},
       });
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       // Simulate storage becoming unavailable
       (global as any).chrome = undefined;
       
       // Should not throw when storage becomes unavailable
-      await expect(clickTracker.recordClick('https://example.com')).resolves.not.toThrow();
+      await expect(storageManager.recordClick('https://example.com')).resolves.not.toThrow();
     });
   });
 
@@ -206,8 +205,8 @@ describe('Error Handling Tests', () => {
   describe('StorageManager Error Handling', () => {
     it('should detect storage unavailability', () => {
       (global as unknown as { chrome: typeof chrome }).chrome = undefined as unknown as typeof chrome;
-      const manager = new StorageManager();
-      expect(manager.isStorageAvailable()).toBe(false);
+      const storageManager = new EnhancedStorageManager();
+      expect(storageManager.isStorageAvailable()).toBe(false);
     });
 
     it('should handle version compatibility issues', async () => {
@@ -216,8 +215,8 @@ describe('Error Handling Tests', () => {
         webpage_click_data_version: 999, // Future version
       });
 
-      const manager = new StorageManager();
-      const data = await manager.loadClickData();
+      const storageManager = new EnhancedStorageManager();
+      const data = await storageManager.loadClickData();
       expect(data).toEqual({}); // Should reset for compatibility
     });
 
@@ -225,8 +224,8 @@ describe('Error Handling Tests', () => {
       const storageError = new Error('Storage failed');
       mockChrome.storage.sync.get.mockRejectedValue(storageError);
 
-      const manager = new StorageManager();
-      const data = await manager.loadClickData();
+      const storageManager = new EnhancedStorageManager();
+      const data = await storageManager.loadClickData();
       
       // Should return empty data on error
       expect(data).toEqual({});
@@ -237,8 +236,8 @@ describe('Error Handling Tests', () => {
       (global as any).chrome = mockChrome;
       mockChrome.storage.sync.getBytesInUse.mockResolvedValue(1024);
 
-      const manager = new StorageManager();
-      const info = await manager.getStorageInfo();
+      const storageManager = new EnhancedStorageManager();
+      const info = await storageManager.getStorageInfo();
       expect(info.bytesInUse).toBe(1024);
       expect(info.quotaBytes).toBe(102400);
     });
@@ -246,16 +245,16 @@ describe('Error Handling Tests', () => {
     it('should handle storage info errors gracefully', async () => {
       mockChrome.storage.sync.getBytesInUse.mockRejectedValue(new Error('Storage error'));
 
-      const manager = new StorageManager();
-      const info = await manager.getStorageInfo();
+      const storageManager = new EnhancedStorageManager();
+      const info = await storageManager.getStorageInfo();
       expect(info.bytesInUse).toBe(0);
       expect(info.quotaBytes).toBe(0);
     });
 
     it('should return zero storage info when storage unavailable', async () => {
       (global as any).chrome = undefined;
-      const manager = new StorageManager();
-      const info = await manager.getStorageInfo();
+      const storageManager = new EnhancedStorageManager();
+      const info = await storageManager.getStorageInfo();
       expect(info.bytesInUse).toBe(0);
       expect(info.quotaBytes).toBe(0);
     });
@@ -264,13 +263,13 @@ describe('Error Handling Tests', () => {
       const saveError = new Error('Save failed');
       mockChrome.storage.sync.set.mockRejectedValue(saveError);
 
-      const manager = new StorageManager();
+      const storageManager = new EnhancedStorageManager();
       const testData: IClickData = {
         'example.com/': { count: 1, lastClicked: Date.now() },
       };
 
       // Should not throw on save error
-      await expect(manager.saveClickData(testData)).resolves.not.toThrow();
+      await expect(storageManager.saveClickData(testData)).resolves.not.toThrow();
     });
   });
 
@@ -285,14 +284,14 @@ describe('Error Handling Tests', () => {
       mockChrome.storage.local.get.mockRejectedValue(new Error('Local storage failed'));
       mockChrome.storage.local.set.mockRejectedValue(new Error('Local storage failed'));
 
-      await clickTracker.loadClickData();
-      await clickTracker.recordClick('https://example.com');
+      await storageManager.loadClickData();
+      await storageManager.recordClick('https://example.com');
 
       const searchResults: ISearchResult[] = [
         { item: { id: '1', title: 'Test', url: 'https://example.com' }, score: 0.5 },
       ];
 
-      const clickData = clickTracker.getAllClickData();
+      const clickData = storageManager.getAllClickData();
       const results = searchScorer.enhanceSearchResults(searchResults, clickData);
 
       // Should still work with fallback behavior
@@ -305,10 +304,10 @@ describe('Error Handling Tests', () => {
       const contextError = new Error('The extension context invalidated');
       mockChrome.storage.sync.get.mockRejectedValue(contextError);
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Should handle gracefully and continue with empty data
-      expect(clickTracker.getAllClickData()).toEqual({});
+      expect(storageManager.getAllClickData()).toEqual({});
     });
   });
 });

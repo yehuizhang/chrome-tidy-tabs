@@ -33,7 +33,7 @@
 - Asset copying via Webpack for distribution
 
 ### Code Conventions
-- TypeScript interfaces prefixed with `I` (e.g., `IBookmark`, `ISearchResult`)
+- TypeScript interfaces prefixed with `I` (e.g., `IBookmarkTreeNode`, `ISearchResult`)
 - Strict TypeScript configuration with comprehensive type checking
 - ESLint + Prettier for consistent code style
 - Chrome globals properly typed and declared

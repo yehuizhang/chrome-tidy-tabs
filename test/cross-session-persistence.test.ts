@@ -3,22 +3,19 @@
  * Tests data persistence across browser sessions, extension reloads, and device sync
  */
 
-import { ClickTracker } from '../src/click-tracker';
-import { SearchScorer } from '../src/search-scorer';
-import { StorageManager } from '../src/storage-manager';
-import { IBookmark, ISearchResult, IClickData } from '../src/types';
+import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
+import { SearchScorer } from '../src/searching/search-scorer';
+import { IBookmarkTreeNode, ISearchResult, IClickData } from '../src/searching/types';
 import { mockChromeStorage } from './setup';
 
 describe('Cross-Session Persistence Tests', () => {
-  let clickTracker: ClickTracker;
+  let storageManager: EnhancedStorageManager;
   let searchScorer: SearchScorer;
-  let storageManager: StorageManager;
 
   beforeEach(() => {
-    clickTracker = new ClickTracker();
-    clickTracker.enableTestMode();
+    storageManager = new EnhancedStorageManager();
+    storageManager.enableTestMode();
     searchScorer = new SearchScorer();
-    storageManager = new StorageManager();
     // Don't override the persistent mock storage behavior from setup.ts
   });
 
@@ -27,75 +24,84 @@ describe('Cross-Session Persistence Tests', () => {
       // Session 1: User clicks on bookmarks
       
       // Simulate user activity in first session
-      await clickTracker.loadClickData();
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://stackoverflow.com');
-      await clickTracker.recordClick('https://developer.mozilla.org');
+      await storageManager.loadClickData();
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://stackoverflow.com');
+      await storageManager.recordClick('https://developer.mozilla.org');
 
       // Capture the data that would be saved
-      const savedData = clickTracker.getAllClickData();
+      const savedData = storageManager.getAllClickData();
       expect(savedData['github.com/']?.count).toBe(2);
       expect(savedData['stackoverflow.com/']?.count).toBe(1);
       expect(savedData['developer.mozilla.org/']?.count).toBe(1);
 
       // Simulate browser restart - new ClickTracker instance
-      const session2ClickTracker = new ClickTracker();
-      session2ClickTracker.enableTestMode();
+      const session2StorageManager = new EnhancedStorageManager();
+      session2StorageManager.enableTestMode();
       mockChromeStorage.sync.get.mockResolvedValue({
         webpage_click_data: savedData,
       });
 
       // Session 2: Load previous data
-      await session2ClickTracker.loadClickData();
+      await session2StorageManager.loadClickData();
       
       // Verify previous session data is loaded
-      expect(session2ClickTracker.getClickCount('https://github.com')).toBe(2);
-      expect(session2ClickTracker.getClickCount('https://stackoverflow.com')).toBe(1);
-      expect(session2ClickTracker.getClickCount('https://developer.mozilla.org')).toBe(1);
+      expect(session2StorageManager.getClickCount('https://github.com')).toBe(2);
+      expect(session2StorageManager.getClickCount('https://stackoverflow.com')).toBe(1);
+      expect(session2StorageManager.getClickCount('https://developer.mozilla.org')).toBe(1);
 
       // Add more clicks in session 2
-      await session2ClickTracker.recordClick('https://github.com');
-      await session2ClickTracker.recordClick('https://react.dev');
+      await session2StorageManager.recordClick('https://github.com');
+      await session2StorageManager.recordClick('https://react.dev');
 
       // Verify cumulative counts
-      expect(session2ClickTracker.getClickCount('https://github.com')).toBe(3);
-      expect(session2ClickTracker.getClickCount('https://react.dev')).toBe(1);
-      expect(session2ClickTracker.getClickCount('https://stackoverflow.com')).toBe(1);
+      expect(session2StorageManager.getClickCount('https://github.com')).toBe(3);
+      expect(session2StorageManager.getClickCount('https://react.dev')).toBe(1);
+      expect(session2StorageManager.getClickCount('https://stackoverflow.com')).toBe(1);
     });
 
     it('should maintain search ranking improvements across sessions', async () => {
-      const mockBookmarks: IBookmark[] = [
-        { id: '1', title: 'GitHub', url: 'https://github.com' },
-        { id: '2', title: 'Stack Overflow', url: 'https://stackoverflow.com' },
-        { id: '3', title: 'MDN Web Docs', url: 'https://developer.mozilla.org' },
+      const mockBookmarks: IBookmarkTreeNode[] = [
+        {
+          id: '1', title: 'GitHub', url: 'https://github.com',
+          syncing: false
+        },
+        {
+          id: '2', title: 'Stack Overflow', url: 'https://stackoverflow.com',
+          syncing: false
+        },
+        {
+          id: '3', title: 'MDN Web Docs', url: 'https://developer.mozilla.org',
+          syncing: false
+        },
       ];
 
       // Session 1: Build up click history
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       // GitHub gets many clicks
       for (let i = 0; i < 10; i++) {
-        await clickTracker.recordClick('https://github.com');
+        await storageManager.recordClick('https://github.com');
       }
       
       // Stack Overflow gets fewer clicks
       for (let i = 0; i < 3; i++) {
-        await clickTracker.recordClick('https://stackoverflow.com');
+        await storageManager.recordClick('https://stackoverflow.com');
       }
 
-      const session1Data = clickTracker.getAllClickData();
+      const session1Data = storageManager.getAllClickData();
 
       // Simulate session end and new session start
-      const session2ClickTracker = new ClickTracker();
-      session2ClickTracker.enableTestMode();
+      const session2StorageManager = new EnhancedStorageManager();
+      session2StorageManager.enableTestMode();
       const session2SearchScorer = new SearchScorer();
       
       mockChromeStorage.sync.get.mockResolvedValue({
         webpage_click_data: session1Data,
       });
 
-      await session2ClickTracker.loadClickData();
+      await session2StorageManager.loadClickData();
 
       // Session 2: Search should reflect previous session's click history
       const searchResults: ISearchResult[] = [
@@ -106,7 +112,7 @@ describe('Cross-Session Persistence Tests', () => {
 
       const enhancedResults = session2SearchScorer.enhanceSearchResults(
         searchResults,
-        session2ClickTracker.getAllClickData()
+        session2StorageManager.getAllClickData()
       );
 
       // GitHub should rank first due to click history from previous session
@@ -123,15 +129,15 @@ describe('Cross-Session Persistence Tests', () => {
 
       // Simulate 5 browser sessions
       for (let session = 1; session <= 5; session++) {
-        const sessionClickTracker = new ClickTracker();
-        sessionClickTracker.enableTestMode();
+        const sessionStorageManager = new EnhancedStorageManager();
+        sessionStorageManager.enableTestMode();
         
         // Load previous session data
         mockChromeStorage.sync.get.mockResolvedValue({
           webpage_click_data: cumulativeData,
         });
 
-        await sessionClickTracker.loadClickData();
+        await sessionStorageManager.loadClickData();
 
         // Each session adds different patterns of clicks
         const sessionUrls = [
@@ -142,12 +148,12 @@ describe('Cross-Session Persistence Tests', () => {
 
         for (const url of sessionUrls) {
           for (let i = 0; i < session; i++) { // More clicks in later sessions
-            await sessionClickTracker.recordClick(url);
+            await sessionStorageManager.recordClick(url);
           }
         }
 
         // Update cumulative data for next session
-        cumulativeData = sessionClickTracker.getAllClickData();
+        cumulativeData = sessionStorageManager.getAllClickData();
       }
 
       // Verify final accumulated data
@@ -167,29 +173,29 @@ describe('Cross-Session Persistence Tests', () => {
   describe('Extension Lifecycle Persistence', () => {
     it('should persist data across extension disable/enable cycles', async () => {
       // Extension enabled: Build up data
-      await clickTracker.loadClickData();
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://stackoverflow.com');
+      await storageManager.loadClickData();
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://stackoverflow.com');
 
-      const preDisableData = clickTracker.getAllClickData();
+      const preDisableData = storageManager.getAllClickData();
 
       // Simulate extension disable/enable - new instances
-      const postEnableClickTracker = new ClickTracker();
-      postEnableClickTracker.enableTestMode();
+      const postEnableStorageManager = new EnhancedStorageManager();
+      postEnableStorageManager.enableTestMode();
       mockChromeStorage.sync.get.mockResolvedValue({
         webpage_click_data: preDisableData,
       });
 
-      await postEnableClickTracker.loadClickData();
+      await postEnableStorageManager.loadClickData();
 
       // Data should be preserved
-      expect(postEnableClickTracker.getClickCount('https://github.com')).toBe(2);
-      expect(postEnableClickTracker.getClickCount('https://stackoverflow.com')).toBe(1);
+      expect(postEnableStorageManager.getClickCount('https://github.com')).toBe(2);
+      expect(postEnableStorageManager.getClickCount('https://stackoverflow.com')).toBe(1);
 
       // Should be able to continue adding data
-      await postEnableClickTracker.recordClick('https://github.com');
-      expect(postEnableClickTracker.getClickCount('https://github.com')).toBe(3);
+      await postEnableStorageManager.recordClick('https://github.com');
+      expect(postEnableStorageManager.getClickCount('https://github.com')).toBe(3);
     });
 
     it('should handle extension updates and version changes', async () => {
@@ -212,8 +218,8 @@ describe('Cross-Session Persistence Tests', () => {
 
     it('should handle extension context invalidation gracefully', async () => {
       // Build up some data
-      await clickTracker.loadClickData();
-      await clickTracker.recordClick('https://github.com');
+      await storageManager.loadClickData();
+      await storageManager.recordClick('https://github.com');
 
       // Simulate context invalidation
       const contextError = new Error('The extension context invalidated');
@@ -221,12 +227,12 @@ describe('Cross-Session Persistence Tests', () => {
       mockChromeStorage.sync.set.mockRejectedValue(contextError);
 
       // New instance should handle gracefully
-      const newClickTracker = new ClickTracker();
-      newClickTracker.enableTestMode();
-      await expect(newClickTracker.loadClickData()).resolves.not.toThrow();
+      const newStorageManager = new EnhancedStorageManager();
+      newStorageManager.enableTestMode();
+      await expect(newStorageManager.loadClickData()).resolves.not.toThrow();
       
       // Should continue working with fallback behavior
-      await expect(newClickTracker.recordClick('https://example.com')).resolves.not.toThrow();
+      await expect(newStorageManager.recordClick('https://example.com')).resolves.not.toThrow();
     });
   });
 
@@ -260,23 +266,23 @@ describe('Cross-Session Persistence Tests', () => {
       });
 
       // Device 3: User opens extension on tablet
-      const device3ClickTracker = new ClickTracker();
-      device3ClickTracker.enableTestMode();
-      await device3ClickTracker.loadClickData();
+      const device3StorageManager = new EnhancedStorageManager();
+      device3StorageManager.enableTestMode();
+      await device3StorageManager.loadClickData();
 
       // Should have merged data from both devices
-      expect(device3ClickTracker.getClickCount('https://github.com')).toBe(10); // From device 1
-      expect(device3ClickTracker.getClickCount('https://stackoverflow.com')).toBe(5);
-      expect(device3ClickTracker.getClickCount('https://work-tool.com')).toBe(8);
-      expect(device3ClickTracker.getClickCount('https://reddit.com')).toBe(20); // From device 2
-      expect(device3ClickTracker.getClickCount('https://youtube.com')).toBe(12);
+      expect(device3StorageManager.getClickCount('https://github.com')).toBe(10); // From device 1
+      expect(device3StorageManager.getClickCount('https://stackoverflow.com')).toBe(5);
+      expect(device3StorageManager.getClickCount('https://work-tool.com')).toBe(8);
+      expect(device3StorageManager.getClickCount('https://reddit.com')).toBe(20); // From device 2
+      expect(device3StorageManager.getClickCount('https://youtube.com')).toBe(12);
 
       // Add clicks on device 3
-      await device3ClickTracker.recordClick('https://github.com');
-      await device3ClickTracker.recordClick('https://mobile-app.com');
+      await device3StorageManager.recordClick('https://github.com');
+      await device3StorageManager.recordClick('https://mobile-app.com');
 
-      expect(device3ClickTracker.getClickCount('https://github.com')).toBe(11);
-      expect(device3ClickTracker.getClickCount('https://mobile-app.com')).toBe(1);
+      expect(device3StorageManager.getClickCount('https://github.com')).toBe(11);
+      expect(device3StorageManager.getClickCount('https://mobile-app.com')).toBe(1);
     });
 
     it('should handle sync conflicts and data merging', async () => {
@@ -290,17 +296,17 @@ describe('Cross-Session Persistence Tests', () => {
         webpage_click_data: conflictingData,
       });
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Local device adds more clicks
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://new-site.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://new-site.com');
 
       // Should merge correctly
-      expect(clickTracker.getClickCount('https://github.com')).toBe(7); // 5 + 2
-      expect(clickTracker.getClickCount('https://stackoverflow.com')).toBe(3); // Unchanged
-      expect(clickTracker.getClickCount('https://new-site.com')).toBe(1); // New
+      expect(storageManager.getClickCount('https://github.com')).toBe(7); // 5 + 2
+      expect(storageManager.getClickCount('https://stackoverflow.com')).toBe(3); // Unchanged
+      expect(storageManager.getClickCount('https://new-site.com')).toBe(1); // New
     });
 
     it('should handle partial sync failures', async () => {
@@ -313,19 +319,19 @@ describe('Cross-Session Persistence Tests', () => {
         webpage_click_data: initialData,
       });
 
-      await clickTracker.loadClickData();
-      expect(clickTracker.getClickCount('https://github.com')).toBe(5);
+      await storageManager.loadClickData();
+      expect(storageManager.getClickCount('https://github.com')).toBe(5);
 
       // Sync save fails
       mockChromeStorage.sync.set.mockRejectedValue(new Error('Sync failed'));
 
       // Should continue working locally
-      await clickTracker.recordClick('https://github.com');
-      expect(clickTracker.getClickCount('https://github.com')).toBe(6);
+      await storageManager.recordClick('https://github.com');
+      expect(storageManager.getClickCount('https://github.com')).toBe(6);
 
       // Should not lose local data
-      await clickTracker.recordClick('https://new-site.com');
-      expect(clickTracker.getClickCount('https://new-site.com')).toBe(1);
+      await storageManager.recordClick('https://new-site.com');
+      expect(storageManager.getClickCount('https://new-site.com')).toBe(1);
     });
   });
 
@@ -348,25 +354,37 @@ describe('Cross-Session Persistence Tests', () => {
         webpage_click_data: longTermData,
       });
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // All data should be preserved
-      expect(clickTracker.getClickCount('https://daily-site.com')).toBe(365);
-      expect(clickTracker.getClickCount('https://weekly-site.com')).toBe(52);
-      expect(clickTracker.getClickCount('https://monthly-site.com')).toBe(12);
-      expect(clickTracker.getClickCount('https://old-site.com')).toBe(5);
+      expect(storageManager.getClickCount('https://daily-site.com')).toBe(365);
+      expect(storageManager.getClickCount('https://weekly-site.com')).toBe(52);
+      expect(storageManager.getClickCount('https://monthly-site.com')).toBe(12);
+      expect(storageManager.getClickCount('https://old-site.com')).toBe(5);
 
       // Search should properly weight based on usage patterns
       const searchResults: ISearchResult[] = [
-        { item: { id: '1', title: 'Daily Site', url: 'https://daily-site.com' }, score: 0.8 },
-        { item: { id: '2', title: 'Weekly Site', url: 'https://weekly-site.com' }, score: 0.3 },
-        { item: { id: '3', title: 'Monthly Site', url: 'https://monthly-site.com' }, score: 0.2 },
-        { item: { id: '4', title: 'Old Site', url: 'https://old-site.com' }, score: 0.1 },
+        { item: {
+          id: '1', title: 'Daily Site', url: 'https://daily-site.com',
+          syncing: false
+        }, score: 0.8 },
+        { item: {
+          id: '2', title: 'Weekly Site', url: 'https://weekly-site.com',
+          syncing: false
+        }, score: 0.3 },
+        { item: {
+          id: '3', title: 'Monthly Site', url: 'https://monthly-site.com',
+          syncing: false
+        }, score: 0.2 },
+        { item: {
+          id: '4', title: 'Old Site', url: 'https://old-site.com',
+          syncing: false
+        }, score: 0.1 },
       ];
 
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
 
       // Daily site should rank first despite worst fuzzy score
@@ -407,8 +425,8 @@ describe('Cross-Session Persistence Tests', () => {
         webpage_click_data: persistentData,
       });
 
-      await clickTracker.loadClickData();
-      expect(clickTracker.getClickCount('https://important-site.com')).toBe(100);
+      await storageManager.loadClickData();
+      expect(storageManager.getClickCount('https://important-site.com')).toBe(100);
 
       // Simulate various error conditions
       const errorConditions = [
@@ -422,10 +440,10 @@ describe('Cross-Session Persistence Tests', () => {
         mockChromeStorage.sync.set.mockRejectedValueOnce(error);
         
         // Should continue working despite errors
-        await expect(clickTracker.recordClick('https://important-site.com')).resolves.not.toThrow();
+        await expect(storageManager.recordClick('https://important-site.com')).resolves.not.toThrow();
         
         // Data should still be accessible
-        expect(clickTracker.getClickCount('https://important-site.com')).toBeGreaterThan(100);
+        expect(storageManager.getClickCount('https://important-site.com')).toBeGreaterThan(100);
       }
     });
   });

@@ -1,10 +1,10 @@
-import { IBookmark } from './types';
+import { IBookmarkTreeNode } from './types';
 import { escapeHtml, getFaviconUrl, truncateUrl } from './utils';
 
 export class BookmarkRenderer {
   private static readonly MAX_RESULTS = 8;
 
-  static renderBookmarks(bookarks: IBookmark[]): string {
+  static renderBookmarks(bookarks: IBookmarkTreeNode[]): string {
     if (bookarks.length === 0) {
       return '<div class="no-results">No bookmarks found</div>';
     }
@@ -13,7 +13,7 @@ export class BookmarkRenderer {
     return displayBookmarks.map(this.renderBookmark).join('');
   }
 
-  private static renderBookmark(bookmark: IBookmark): string {
+  private static renderBookmark(bookmark: IBookmarkTreeNode): string {
     const faviconUrl = getFaviconUrl(bookmark.url || '');
     const truncatedUrl = truncateUrl(bookmark.url || '');
 

@@ -1,5 +1,6 @@
-import { SearchScorer } from '../src/search-scorer';
-import { ISearchResult, IClickData } from '../src/types';
+import { SearchScorer } from '../src/searching/search-scorer';
+import { ISearchResult, IClickData } from '../src/searching/types';
+import { createMockBookmark } from './test-helpers';
 
 describe('SearchScorer', () => {
   let scorer: SearchScorer;

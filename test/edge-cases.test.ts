@@ -3,28 +3,26 @@
  * Tests unusual scenarios, error conditions, and boundary cases
  */
 
-import { ClickTracker } from '../src/click-tracker';
-import { SearchScorer } from '../src/search-scorer';
-import { StorageManager } from '../src/storage-manager';
-import { ISearchResult, IClickData } from '../src/types';
+import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
+import { SearchScorer } from '../src/searching/search-scorer';
+import { ISearchResult, IClickData } from '../src/searching/types';
 import { mockChromeStorage } from './setup';
+import { createMockBookmark } from './test-helpers';
 
 describe('Edge Cases and Error Conditions', () => {
-  let clickTracker: ClickTracker;
+  let storageManager: EnhancedStorageManager;
   let searchScorer: SearchScorer;
-  let storageManager: StorageManager;
 
   beforeEach(() => {
-    clickTracker = new ClickTracker();
-    clickTracker.enableTestMode();
+    storageManager = new EnhancedStorageManager();
+    storageManager.enableTestMode();
     searchScorer = new SearchScorer();
-    storageManager = new StorageManager();
     // Don't override the persistent mock storage behavior from setup.ts
   });
 
   describe('URL Edge Cases', () => {
     it('should handle various URL formats correctly', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const urlTestCases = [
         // Standard URLs
@@ -67,23 +65,23 @@ describe('Edge Cases and Error Conditions', () => {
       const expectedCounts: { [key: string]: number } = {};
       
       for (const testCase of urlTestCases) {
-        await clickTracker.recordClick(testCase.input);
+        await storageManager.recordClick(testCase.input);
         
         // Update expected count for this normalized URL
         expectedCounts[testCase.expected] = (expectedCounts[testCase.expected] || 0) + 1;
         
         // Verify the click count matches expected for this normalized URL
-        expect(clickTracker.getClickCount(testCase.input)).toBe(expectedCounts[testCase.expected]);
+        expect(storageManager.getClickCount(testCase.input)).toBe(expectedCounts[testCase.expected]);
         
         // Verify the normalized URL is used internally
-        const allData = clickTracker.getAllClickData();
+        const allData = storageManager.getAllClickData();
         expect(allData[testCase.expected]).toBeDefined();
         expect(allData[testCase.expected]?.count).toBe(expectedCounts[testCase.expected]);
       }
     });
 
     it('should handle malformed and edge case URLs gracefully', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const malformedUrls = [
         'not-a-url',
@@ -108,23 +106,19 @@ describe('Edge Cases and Error Conditions', () => {
 
       // Should not throw errors for any malformed URL
       for (const url of malformedUrls) {
-        await expect(clickTracker.recordClick(url)).resolves.not.toThrow();
-        expect(clickTracker.getClickCount(url)).toBeGreaterThanOrEqual(0);
+        await expect(storageManager.recordClick(url)).resolves.not.toThrow();
+        expect(storageManager.getClickCount(url)).toBeGreaterThanOrEqual(0);
       }
 
       // Should be able to search with these URLs
       const searchResults: ISearchResult[] = malformedUrls.map((url, index) => ({
-        item: {
-          id: `${index}`,
-          title: `Item ${index}`,
-          url,
-        },
+        item: createMockBookmark(`${index}`, `Item ${index}`, url),
         score: Math.random(),
       }));
 
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
 
       expect(enhancedResults).toHaveLength(malformedUrls.length);
@@ -135,7 +129,7 @@ describe('Edge Cases and Error Conditions', () => {
     });
 
     it('should handle extremely long URLs', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Create very long URL
       const longPath = 'very/'.repeat(1000) + 'long/path';
@@ -143,18 +137,18 @@ describe('Edge Cases and Error Conditions', () => {
       const longQuery = '?param=' + 'a'.repeat(1000);
       const veryLongUrl = longUrl + longQuery;
 
-      await clickTracker.recordClick(veryLongUrl);
-      expect(clickTracker.getClickCount(veryLongUrl)).toBe(1);
+      await storageManager.recordClick(veryLongUrl);
+      expect(storageManager.getClickCount(veryLongUrl)).toBe(1);
 
       // Should handle in search
       const searchResults: ISearchResult[] = [{
-        item: { id: '1', title: 'Long URL', url: veryLongUrl },
+        item: createMockBookmark('1', 'Long URL', veryLongUrl),
         score: 0.5,
       }];
 
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
 
       expect(enhancedResults).toHaveLength(1);
@@ -162,7 +156,7 @@ describe('Edge Cases and Error Conditions', () => {
     });
 
     it('should handle Unicode and international domain names', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const unicodeUrls = [
         'https://例え.テスト',
@@ -174,8 +168,8 @@ describe('Edge Cases and Error Conditions', () => {
       ];
 
       for (const url of unicodeUrls) {
-        await expect(clickTracker.recordClick(url)).resolves.not.toThrow();
-        expect(clickTracker.getClickCount(url)).toBeGreaterThanOrEqual(0);
+        await expect(storageManager.recordClick(url)).resolves.not.toThrow();
+        expect(storageManager.getClickCount(url)).toBeGreaterThanOrEqual(0);
       }
     });
   });
@@ -196,10 +190,10 @@ describe('Edge Cases and Error Conditions', () => {
       for (const corruptedData of corruptedDataCases) {
         mockChromeStorage.sync.get.mockResolvedValueOnce(corruptedData);
         
-        const tracker = new ClickTracker();
-        tracker.enableTestMode();
-        await expect(tracker.loadClickData()).resolves.not.toThrow();
-        expect(tracker.getAllClickData()).toEqual({});
+        const storageManager = new EnhancedStorageManager();
+        storageManager.enableTestMode();
+        await expect(storageManager.loadClickData()).resolves.not.toThrow();
+        expect(storageManager.getAllClickData()).toEqual({});
       }
     });
 
@@ -226,8 +220,8 @@ describe('Edge Cases and Error Conditions', () => {
 
       mockChromeStorage.sync.get.mockResolvedValue(partiallyCorruptedData);
 
-      await clickTracker.loadClickData();
-      const cleanedData = clickTracker.getAllClickData();
+      await storageManager.loadClickData();
+      const cleanedData = storageManager.getAllClickData();
 
       // Should only keep valid entries
       expect(cleanedData['valid1.com/']).toEqual({ count: 5, lastClicked: expect.any(Number) });
@@ -258,16 +252,16 @@ describe('Edge Cases and Error Conditions', () => {
     });
 
     it('should recover from storage corruption during save', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Simulate storage corruption during save
       mockChromeStorage.sync.set.mockRejectedValue(new Error('Storage corrupted'));
 
       // Should not throw and should continue working
-      await expect(clickTracker.recordClick('https://example.com')).resolves.not.toThrow();
+      await expect(storageManager.recordClick('https://example.com')).resolves.not.toThrow();
       
       // Data should still be available in memory
-      expect(clickTracker.getClickCount('https://example.com')).toBe(1);
+      expect(storageManager.getClickCount('https://example.com')).toBe(1);
     });
   });
 
@@ -277,11 +271,11 @@ describe('Edge Cases and Error Conditions', () => {
       mockChromeStorage.sync.get.mockRejectedValue(contextError);
       mockChromeStorage.sync.set.mockRejectedValue(contextError);
 
-      await clickTracker.loadClickData();
-      await clickTracker.recordClick('https://example.com');
+      await storageManager.loadClickData();
+      await storageManager.recordClick('https://example.com');
 
       // Should continue working with fallback behavior
-      expect(clickTracker.getAllClickData()).toBeDefined();
+      expect(storageManager.getAllClickData()).toBeDefined();
     });
 
     it('should handle Chrome API unavailability', async () => {
@@ -289,13 +283,12 @@ describe('Edge Cases and Error Conditions', () => {
       const originalChrome = (global as any).chrome;
       (global as any).chrome = undefined;
 
-      const tracker = new ClickTracker();
-      tracker.enableTestMode();
-      const manager = new StorageManager();
+      const localStorageManager = new EnhancedStorageManager();
+      localStorageManager.enableTestMode();
 
-      await expect(tracker.loadClickData()).resolves.not.toThrow();
-      await expect(tracker.recordClick('https://example.com')).resolves.not.toThrow();
-      expect(manager.isStorageAvailable()).toBe(false);
+      await expect(localStorageManager.loadClickData()).resolves.not.toThrow();
+      await expect(localStorageManager.recordClick('https://example.com')).resolves.not.toThrow();
+      expect(localStorageManager.isStorageAvailable()).toBe(false);
 
       // Restore Chrome API
       (global as any).chrome = originalChrome;
@@ -307,10 +300,10 @@ describe('Edge Cases and Error Conditions', () => {
         storage: undefined,
       };
 
-      const tracker = new ClickTracker();
-      tracker.enableTestMode();
-      await expect(tracker.loadClickData()).resolves.not.toThrow();
-      expect(tracker.getAllClickData()).toEqual({});
+      const storageManager = new EnhancedStorageManager();
+      storageManager.enableTestMode();
+      await expect(storageManager.loadClickData()).resolves.not.toThrow();
+      expect(storageManager.getAllClickData()).toEqual({});
     });
   });
 
@@ -325,13 +318,13 @@ describe('Edge Cases and Error Conditions', () => {
         webpage_click_data: testData,
       });
 
-      await clickTracker.loadClickData();
-      expect(clickTracker.getClickCount('https://max.com')).toBe(maxSafeInteger);
+      await storageManager.loadClickData();
+      expect(storageManager.getClickCount('https://max.com')).toBe(maxSafeInteger);
 
       // Should handle incrementing max value
-      await clickTracker.recordClick('https://max.com');
+      await storageManager.recordClick('https://max.com');
       // Note: This might overflow, but should not crash
-      expect(clickTracker.getClickCount('https://max.com')).toBeGreaterThan(maxSafeInteger);
+      expect(storageManager.getClickCount('https://max.com')).toBeGreaterThan(maxSafeInteger);
     });
 
     it('should handle minimum and zero timestamps', async () => {
@@ -352,21 +345,21 @@ describe('Edge Cases and Error Conditions', () => {
           webpage_click_data: testData,
         });
 
-        const tracker = new ClickTracker();
-        tracker.enableTestMode();
-        await tracker.loadClickData();
+        const storageManager = new EnhancedStorageManager();
+        storageManager.enableTestMode();
+        await storageManager.loadClickData();
 
         if (timestamp > 0) {
-          expect(tracker.getClickCount('https://test.com')).toBe(1);
+          expect(storageManager.getClickCount('https://test.com')).toBe(1);
         } else {
           // Invalid timestamps should be filtered out
-          expect(tracker.getClickCount('https://test.com')).toBe(0);
+          expect(storageManager.getClickCount('https://test.com')).toBe(0);
         }
       }
     });
 
     it('should handle empty and single-character URLs', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const edgeCaseUrls = [
         '',
@@ -377,8 +370,8 @@ describe('Edge Cases and Error Conditions', () => {
       ];
 
       for (const url of edgeCaseUrls) {
-        await expect(clickTracker.recordClick(url)).resolves.not.toThrow();
-        expect(clickTracker.getClickCount(url)).toBeGreaterThanOrEqual(0);
+        await expect(storageManager.recordClick(url)).resolves.not.toThrow();
+        expect(storageManager.getClickCount(url)).toBeGreaterThanOrEqual(0);
       }
     });
   });
@@ -390,18 +383,18 @@ describe('Edge Cases and Error Conditions', () => {
         { score: 0.5 } as ISearchResult,
         
         // Missing score
-        { item: { id: '1', title: 'Test' } } as ISearchResult,
+        { item: createMockBookmark('1', 'Test') } as ISearchResult,
         
         // Missing URL
-        { item: { id: '2', title: 'No URL' }, score: 0.3 } as ISearchResult,
+        { item: createMockBookmark('2', 'No URL'), score: 0.3 } as ISearchResult,
         
         // Empty title
-        { item: { id: '3', title: '', url: 'https://example.com' }, score: 0.4 } as ISearchResult,
+        { item: createMockBookmark('3', '', 'https://example.com'), score: 0.4 } as ISearchResult,
         
         // Invalid score values
-        { item: { id: '4', title: 'Test', url: 'https://test.com' }, score: NaN } as ISearchResult,
-        { item: { id: '5', title: 'Test', url: 'https://test2.com' }, score: Infinity } as ISearchResult,
-        { item: { id: '6', title: 'Test', url: 'https://test3.com' }, score: -1 } as ISearchResult,
+        { item: createMockBookmark('4', 'Test', 'https://test.com'), score: NaN } as ISearchResult,
+        { item: createMockBookmark('5', 'Test', 'https://test2.com'), score: Infinity } as ISearchResult,
+        { item: createMockBookmark('6', 'Test', 'https://test3.com'), score: -1 } as ISearchResult,
       ];
 
       const clickData: IClickData = {
@@ -425,9 +418,9 @@ describe('Edge Cases and Error Conditions', () => {
 
     it('should handle extreme scoring scenarios', async () => {
       const searchResults: ISearchResult[] = [
-        { item: { id: '1', title: 'High Clicks', url: 'https://popular.com' }, score: 0.9 }, // Bad fuzzy score
-        { item: { id: '2', title: 'Perfect Match', url: 'https://perfect.com' }, score: 0.0 }, // Perfect fuzzy score
-        { item: { id: '3', title: 'No Clicks', url: 'https://new.com' }, score: 0.1 }, // Good fuzzy, no clicks
+        { item: createMockBookmark('1', 'High Clicks', 'https://popular.com'), score: 0.9 }, // Bad fuzzy score
+        { item: createMockBookmark('2', 'Perfect Match', 'https://perfect.com'), score: 0.0 }, // Perfect fuzzy score
+        { item: createMockBookmark('3', 'No Clicks', 'https://new.com'), score: 0.1 }, // Good fuzzy, no clicks
       ];
 
       const extremeClickData: IClickData = {
@@ -478,7 +471,7 @@ describe('Edge Cases and Error Conditions', () => {
 
   describe('Concurrent Access Edge Cases', () => {
     it('should handle rapid successive operations on same data', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const url = 'https://rapid.com';
       const operations = 100;
@@ -486,17 +479,17 @@ describe('Edge Cases and Error Conditions', () => {
       // Fire many operations simultaneously
       const promises = Array(operations).fill(null).map(async (_, i) => {
         if (i % 2 === 0) {
-          await clickTracker.recordClick(url);
+          await storageManager.recordClick(url);
           return 'click';
         } else {
-          return clickTracker.getClickCount(url);
+          return storageManager.getClickCount(url);
         }
       });
 
       await Promise.all(promises);
       
       // Should not crash and should have reasonable final count
-      const finalCount = clickTracker.getClickCount(url);
+      const finalCount = storageManager.getClickCount(url);
       expect(finalCount).toBeGreaterThan(0);
       expect(finalCount).toBeLessThanOrEqual(operations / 2);
     });
@@ -511,17 +504,17 @@ describe('Edge Cases and Error Conditions', () => {
       mockChromeStorage.sync.get.mockReturnValue(loadPromise);
 
       // Start loading
-      const loadDataPromise = clickTracker.loadClickData();
+      const loadDataPromise = storageManager.loadClickData();
 
       // Try to record click while loading
-      const recordPromise = clickTracker.recordClick('https://example.com');
+      const recordPromise = storageManager.recordClick('https://example.com');
 
       // Resolve the load
       resolveLoad!({ webpage_click_data: {} });
 
       // Both operations should complete successfully
       await expect(Promise.all([loadDataPromise, recordPromise])).resolves.not.toThrow();
-      expect(clickTracker.getClickCount('https://example.com')).toBe(1);
+      expect(storageManager.getClickCount('https://example.com')).toBe(1);
     });
   });
 
@@ -529,9 +522,9 @@ describe('Edge Cases and Error Conditions', () => {
     it('should handle extremely large individual entries', async () => {
       const hugeUrl = 'https://example.com/' + 'a'.repeat(100000);
       
-      await clickTracker.loadClickData();
-      await expect(clickTracker.recordClick(hugeUrl)).resolves.not.toThrow();
-      expect(clickTracker.getClickCount(hugeUrl)).toBe(1);
+      await storageManager.loadClickData();
+      await expect(storageManager.recordClick(hugeUrl)).resolves.not.toThrow();
+      expect(storageManager.getClickCount(hugeUrl)).toBe(1);
     });
 
     it('should handle resource exhaustion gracefully', async () => {
@@ -542,8 +535,8 @@ describe('Edge Cases and Error Conditions', () => {
       });
 
       try {
-        await clickTracker.loadClickData();
-        await expect(clickTracker.recordClick('https://example.com')).resolves.not.toThrow();
+        await storageManager.loadClickData();
+        await expect(storageManager.recordClick('https://example.com')).resolves.not.toThrow();
       } finally {
         JSON.stringify = originalStringify;
       }

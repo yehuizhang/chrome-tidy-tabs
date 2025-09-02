@@ -1,4 +1,4 @@
-import { IBookmark } from './types';
+import { IBookmarkTreeNode } from './types';
 
 export const escapeHtml = (text: string): string => {
   const div = document.createElement('div');
@@ -28,10 +28,12 @@ export const truncateUrl = (url: string, maxLength = 50): string => {
   }
 };
 
-export const flattenBookmarks = (bookmarks: IBookmark[]) =>
-  bookmarks.reduce<IBookmark[]>((acc, b) => {
-    if (b.url) acc.push(b);
+export const flattenBookmarks = (
+  bookmarks: chrome.bookmarks.BookmarkTreeNode[]
+) =>
+  bookmarks.reduce<IBookmarkTreeNode[]>((acc, b) => {
     if (b.children) acc.push(...flattenBookmarks(b.children));
+    else if (b.url) acc.push(b);
     return acc;
   }, []);
 

@@ -88,7 +88,7 @@ interface IScoringWeights {
 
 ### Enhanced Bookmark Interface
 
-The existing `IBookmark` interface remains unchanged, but search results will be enhanced with click data during processing.
+The existing `IBookmarkTreeNode` interface remains unchanged, but search results will be enhanced with click data during processing.
 
 ## Error Handling
 

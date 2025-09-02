@@ -1,12 +1,7 @@
-export interface IBookmark {
-  id: string;
-  title: string;
-  url?: string;
-  children?: IBookmark[];
-}
+export type IBookmarkTreeNode = chrome.bookmarks.BookmarkTreeNode;
 
 export interface ISearchResult {
-  item: IBookmark;
+  item: IBookmarkTreeNode;
   score?: number;
 }
 

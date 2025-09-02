@@ -3,30 +3,56 @@
  * Tests the complete flow from click tracking to search enhancement
  */
 
-import { ClickTracker } from '../src/click-tracker';
+import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
 import { SearchScorer } from '../src/searching/search-scorer';
-import { StorageManager } from '../src/storage-manager';
-import { IBookmark, ISearchResult, IClickData } from '../src/searching/types';
+import {
+  IBookmarkTreeNode,
+  ISearchResult,
+  IClickData,
+} from '../src/searching/types';
 import { mockChromeStorage, mockStorageData } from './setup';
 
 describe('End-to-End Bookmark History Tracking', () => {
-  let clickTracker: ClickTracker;
+  let storageManager: EnhancedStorageManager;
   let searchScorer: SearchScorer;
-  let storageManager: StorageManager;
 
-  const mockBookmarks: IBookmark[] = [
-    { id: '1', title: 'GitHub', url: 'https://github.com' },
-    { id: '2', title: 'Stack Overflow', url: 'https://stackoverflow.com' },
-    { id: '3', title: 'MDN Web Docs', url: 'https://developer.mozilla.org' },
-    { id: '4', title: 'TypeScript Handbook', url: 'https://www.typescriptlang.org/docs' },
-    { id: '5', title: 'React Documentation', url: 'https://react.dev' },
+  const mockBookmarks: IBookmarkTreeNode[] = [
+    {
+      id: '1',
+      title: 'GitHub',
+      url: 'https://github.com',
+      syncing: false,
+    },
+    {
+      id: '2',
+      title: 'Stack Overflow',
+      url: 'https://stackoverflow.com',
+      syncing: false,
+    },
+    {
+      id: '3',
+      title: 'MDN Web Docs',
+      url: 'https://developer.mozilla.org',
+      syncing: false,
+    },
+    {
+      id: '4',
+      title: 'TypeScript Handbook',
+      url: 'https://www.typescriptlang.org/docs',
+      syncing: false,
+    },
+    {
+      id: '5',
+      title: 'React Documentation',
+      url: 'https://react.dev',
+      syncing: false,
+    },
   ];
 
   beforeEach(() => {
-    clickTracker = new ClickTracker();
-    clickTracker.enableTestMode();
+    storageManager = new EnhancedStorageManager();
+    storageManager.enableTestMode();
     searchScorer = new SearchScorer();
-    storageManager = new StorageManager();
     // Don't override the persistent mock storage behavior from setup.ts
   });
 
@@ -42,28 +68,28 @@ describe('End-to-End Bookmark History Tracking', () => {
       // Initially, Stack Overflow should rank first due to better fuzzy score
       let enhancedResults = searchScorer.enhanceSearchResults(
         initialSearchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
       expect(enhancedResults[0]!.item.title).toBe('Stack Overflow');
       expect(enhancedResults[1]!.item.title).toBe('MDN Web Docs');
       expect(enhancedResults[2]!.item.title).toBe('GitHub');
 
       // Simulate user clicking on GitHub multiple times
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
 
       // Click on Stack Overflow once
-      await clickTracker.recordClick('https://stackoverflow.com');
+      await storageManager.recordClick('https://stackoverflow.com');
 
       // Now GitHub should rank higher due to click history
       enhancedResults = searchScorer.enhanceSearchResults(
         initialSearchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
-      
+
       expect(enhancedResults[0]!.item.title).toBe('GitHub');
       expect(enhancedResults[0]!.clickCount).toBe(5);
       expect(enhancedResults[1]!.item.title).toBe('Stack Overflow');
@@ -82,17 +108,17 @@ describe('End-to-End Bookmark History Tracking', () => {
       ];
 
       // Simulate mouse clicks on GitHub
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
 
       // Simulate keyboard navigation clicks on TypeScript docs
-      await clickTracker.recordClick('https://www.typescriptlang.org/docs');
-      await clickTracker.recordClick('https://www.typescriptlang.org/docs');
-      await clickTracker.recordClick('https://www.typescriptlang.org/docs');
+      await storageManager.recordClick('https://www.typescriptlang.org/docs');
+      await storageManager.recordClick('https://www.typescriptlang.org/docs');
+      await storageManager.recordClick('https://www.typescriptlang.org/docs');
 
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
 
       // TypeScript should rank higher due to more clicks
@@ -112,12 +138,12 @@ describe('End-to-End Bookmark History Tracking', () => {
       ];
 
       // Click tracking should fail silently
-      await clickTracker.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
 
       // Search should still work with fuzzy scores only
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
 
       expect(enhancedResults).toHaveLength(2);
@@ -139,19 +165,19 @@ describe('End-to-End Bookmark History Tracking', () => {
       });
 
       // Load data (simulating new session)
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Verify previous session data is loaded
-      expect(clickTracker.getClickCount('https://github.com')).toBe(10);
-      expect(clickTracker.getClickCount('https://stackoverflow.com')).toBe(5);
+      expect(storageManager.getClickCount('https://github.com')).toBe(10);
+      expect(storageManager.getClickCount('https://stackoverflow.com')).toBe(5);
 
       // Add new clicks in current session
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://react.dev');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://react.dev');
 
       // Verify counts are updated correctly
-      expect(clickTracker.getClickCount('https://github.com')).toBe(11);
-      expect(clickTracker.getClickCount('https://react.dev')).toBe(1);
+      expect(storageManager.getClickCount('https://github.com')).toBe(11);
+      expect(storageManager.getClickCount('https://react.dev')).toBe(1);
 
       // Verify search results use combined data
       const searchResults: ISearchResult[] = [
@@ -162,7 +188,7 @@ describe('End-to-End Bookmark History Tracking', () => {
 
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
 
       // GitHub should rank first (11 clicks), then Stack Overflow (5 clicks), then React (1 click)
@@ -183,12 +209,12 @@ describe('End-to-End Bookmark History Tracking', () => {
 
       mockChromeStorage.sync.get.mockResolvedValue(corruptedData);
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Only valid entries should be loaded
-      expect(clickTracker.getClickCount('https://github.com')).toBe(5);
-      expect(clickTracker.getClickCount('https://stackoverflow.com')).toBe(0); // Invalid entry
-      expect(clickTracker.getClickCount('https://react.dev')).toBe(0); // Invalid entry
+      expect(storageManager.getClickCount('https://github.com')).toBe(5);
+      expect(storageManager.getClickCount('https://stackoverflow.com')).toBe(0); // Invalid entry
+      expect(storageManager.getClickCount('https://react.dev')).toBe(0); // Invalid entry
 
       // Search should work with cleaned data
       const searchResults: ISearchResult[] = [
@@ -197,7 +223,7 @@ describe('End-to-End Bookmark History Tracking', () => {
 
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
 
       expect(enhancedResults[0]!.clickCount).toBe(5);
@@ -205,30 +231,32 @@ describe('End-to-End Bookmark History Tracking', () => {
 
     it('should maintain data integrity across multiple sessions', async () => {
       // Session 1: Initial clicks
-      await clickTracker.loadClickData();
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
+      await storageManager.loadClickData();
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
 
-      const session1Data = clickTracker.getAllClickData();
+      const session1Data = storageManager.getAllClickData();
       expect(session1Data['github.com/']?.count).toBe(2);
 
       // Simulate session end and new session start
-      const newClickTracker = new ClickTracker();
-      newClickTracker.enableTestMode();
+      const newStorageManager = new EnhancedStorageManager();
+      newStorageManager.enableTestMode();
       mockChromeStorage.sync.get.mockResolvedValue({
         webpage_click_data: session1Data,
       });
 
       // Session 2: Load previous data and add more clicks
-      await newClickTracker.loadClickData();
-      expect(newClickTracker.getClickCount('https://github.com')).toBe(2);
+      await newStorageManager.loadClickData();
+      expect(newStorageManager.getClickCount('https://github.com')).toBe(2);
 
-      await newClickTracker.recordClick('https://github.com');
-      await newClickTracker.recordClick('https://stackoverflow.com');
+      await newStorageManager.recordClick('https://github.com');
+      await newStorageManager.recordClick('https://stackoverflow.com');
 
       // Verify data integrity
-      expect(newClickTracker.getClickCount('https://github.com')).toBe(3);
-      expect(newClickTracker.getClickCount('https://stackoverflow.com')).toBe(1);
+      expect(newStorageManager.getClickCount('https://github.com')).toBe(3);
+      expect(newStorageManager.getClickCount('https://stackoverflow.com')).toBe(
+        1
+      );
     });
   });
 
@@ -245,12 +273,14 @@ describe('End-to-End Bookmark History Tracking', () => {
           lastClicked: Date.now() - Math.floor(Math.random() * 86400000),
         };
 
-        if (i < 100) { // Create 100 search results
+        if (i < 100) {
+          // Create 100 search results
           largeSearchResults.push({
             item: {
               id: `${i}`,
               title: `Bookmark ${i}`,
               url: `https://example${i}.com/`,
+              syncing: false,
             },
             score: Math.random(),
           });
@@ -273,17 +303,19 @@ describe('End-to-End Bookmark History Tracking', () => {
     });
 
     it('should maintain performance with frequent click recording', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Measure click recording performance
       const startTime = performance.now();
-      
+
       // Record 100 clicks rapidly
-      const clickPromises = [];
+      const clickPromises: Promise<void>[] = [];
       for (let i = 0; i < 100; i++) {
-        clickPromises.push(clickTracker.recordClick(`https://example${i % 10}.com`));
+        clickPromises.push(
+          storageManager.recordClick(`https://example${i % 10}.com`)
+        );
       }
-      
+
       await Promise.all(clickPromises);
       const endTime = performance.now();
 
@@ -291,22 +323,26 @@ describe('End-to-End Bookmark History Tracking', () => {
       expect(endTime - startTime).toBeLessThan(100);
 
       // Verify clicks were recorded
-      expect(clickTracker.getClickCount('https://example0.com')).toBe(10);
-      expect(clickTracker.getClickCount('https://example1.com')).toBe(10);
+      expect(storageManager.getClickCount('https://example0.com')).toBe(10);
+      expect(storageManager.getClickCount('https://example1.com')).toBe(10);
     });
 
     it('should handle storage quota efficiently', async () => {
       // Create data that would exceed quota
       const largeClickData: IClickData = {};
       for (let i = 0; i < 10000; i++) {
-        largeClickData[`verylongdomainname${i}.com/very/long/path/that/takes/up/space`] = {
+        largeClickData[
+          `verylongdomainname${i}.com/very/long/path/that/takes/up/space`
+        ] = {
           count: i,
           lastClicked: Date.now() - i * 1000,
         };
       }
 
       // Simulate quota exceeded error
-      mockChromeStorage.sync.set.mockRejectedValueOnce(new Error('QUOTA_EXCEEDED'));
+      mockChromeStorage.sync.set.mockRejectedValueOnce(
+        new Error('QUOTA_EXCEEDED')
+      );
       mockChromeStorage.sync.set.mockResolvedValueOnce(undefined); // For cleanup attempt
 
       await storageManager.saveClickData(largeClickData);
@@ -329,21 +365,21 @@ describe('End-to-End Bookmark History Tracking', () => {
         'file:///local/file.html',
       ];
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Should not throw errors for any malformed URL
       for (const url of malformedUrls) {
-        await expect(clickTracker.recordClick(url)).resolves.not.toThrow();
+        await expect(storageManager.recordClick(url)).resolves.not.toThrow();
       }
 
       // Should still be able to retrieve counts
       for (const url of malformedUrls) {
-        expect(clickTracker.getClickCount(url)).toBeGreaterThanOrEqual(0);
+        expect(storageManager.getClickCount(url)).toBeGreaterThanOrEqual(0);
       }
     });
 
     it('should handle concurrent click recording', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const url = 'https://github.com';
       const concurrentClicks = 50;
@@ -351,31 +387,31 @@ describe('End-to-End Bookmark History Tracking', () => {
       // Record many clicks concurrently
       const clickPromises = Array(concurrentClicks)
         .fill(null)
-        .map(() => clickTracker.recordClick(url));
+        .map(() => storageManager.recordClick(url));
 
       await Promise.all(clickPromises);
 
       // All clicks should be recorded
-      expect(clickTracker.getClickCount(url)).toBe(concurrentClicks);
+      expect(storageManager.getClickCount(url)).toBe(concurrentClicks);
     });
 
     it('should handle search with empty and invalid data', async () => {
       const testCases = [
         { searchResults: [], clickData: {}, expectedLength: 0 },
-        { 
+        {
           searchResults: [{ item: mockBookmarks[0]! }], // No score
-          clickData: {}, 
-          expectedLength: 1 
+          clickData: {},
+          expectedLength: 1,
         },
-        { 
+        {
           searchResults: [{ item: { id: '1', title: 'No URL' } }], // No URL
-          clickData: { 'github.com/': { count: 5, lastClicked: Date.now() } }, 
-          expectedLength: 1 
+          clickData: { 'github.com/': { count: 5, lastClicked: Date.now() } },
+          expectedLength: 1,
         },
-        { 
+        {
           searchResults: [{ item: mockBookmarks[0]!, score: 0.5 }],
           clickData: null as unknown as IClickData, // Invalid click data
-          expectedLength: 1 
+          expectedLength: 1,
         },
       ];
 
@@ -385,7 +421,7 @@ describe('End-to-End Bookmark History Tracking', () => {
           testCase.clickData
         );
         expect(results).toHaveLength(testCase.expectedLength);
-        
+
         if (results.length > 0) {
           expect(results[0]!.finalScore).toBeDefined();
           expect(results[0]!.clickCount).toBeGreaterThanOrEqual(0);
@@ -395,19 +431,20 @@ describe('End-to-End Bookmark History Tracking', () => {
 
     it('should handle storage unavailable scenarios', async () => {
       // Simulate Chrome storage not available
-      (global as any).chrome = undefined;
+      (global as unknown).chrome = undefined;
 
-      const newClickTracker = new ClickTracker();
-      newClickTracker.enableTestMode();
-      const newStorageManager = new StorageManager();
+      const newStorageManager = new EnhancedStorageManager();
+      newStorageManager.enableTestMode();
 
       // Should handle gracefully
-      await expect(newClickTracker.loadClickData()).resolves.not.toThrow();
-      await expect(newClickTracker.recordClick('https://github.com')).resolves.not.toThrow();
+      await expect(newStorageManager.loadClickData()).resolves.not.toThrow();
+      await expect(
+        newStorageManager.recordClick('https://github.com')
+      ).resolves.not.toThrow();
       expect(newStorageManager.isStorageAvailable()).toBe(false);
 
       // Should still work with in-memory data
-      expect(newClickTracker.getClickCount('https://github.com')).toBe(0);
+      expect(newStorageManager.getClickCount('https://github.com')).toBe(0);
     });
 
     it('should handle extension context invalidation', async () => {
@@ -415,8 +452,8 @@ describe('End-to-End Bookmark History Tracking', () => {
       mockChromeStorage.sync.get.mockRejectedValue(contextError);
       mockChromeStorage.sync.set.mockRejectedValue(contextError);
 
-      await clickTracker.loadClickData();
-      await clickTracker.recordClick('https://github.com');
+      await storageManager.loadClickData();
+      await storageManager.recordClick('https://github.com');
 
       // Should continue working with fallback behavior
       const searchResults: ISearchResult[] = [
@@ -425,7 +462,7 @@ describe('End-to-End Bookmark History Tracking', () => {
 
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
 
       expect(enhancedResults).toHaveLength(1);
@@ -433,18 +470,18 @@ describe('End-to-End Bookmark History Tracking', () => {
     });
 
     it('should handle rapid successive clicks on same URL', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const url = 'https://github.com';
       const rapidClicks = 10;
 
       // Record clicks in rapid succession
       for (let i = 0; i < rapidClicks; i++) {
-        await clickTracker.recordClick(url);
+        await storageManager.recordClick(url);
       }
 
       // All clicks should be counted
-      expect(clickTracker.getClickCount(url)).toBe(rapidClicks);
+      expect(storageManager.getClickCount(url)).toBe(rapidClicks);
 
       // Should not cause storage errors
       expect(mockChromeStorage.sync.set).toHaveBeenCalledTimes(rapidClicks);
@@ -452,9 +489,9 @@ describe('End-to-End Bookmark History Tracking', () => {
 
     it('should validate all requirements are met', async () => {
       // Requirement 1.1: Click tracking increments count
-      await clickTracker.loadClickData();
-      await clickTracker.recordClick('https://github.com');
-      expect(clickTracker.getClickCount('https://github.com')).toBe(1);
+      await storageManager.loadClickData();
+      await storageManager.recordClick('https://github.com');
+      expect(storageManager.getClickCount('https://github.com')).toBe(1);
 
       // Requirement 1.2: Data stored in Chrome storage
       expect(mockChromeStorage.sync.set).toHaveBeenCalled();
@@ -462,15 +499,17 @@ describe('End-to-End Bookmark History Tracking', () => {
       // Requirement 1.3: Data retrieved from Chrome storage
       // Manually set the mock storage data to test loading
       Object.assign(mockStorageData, {
-        webpage_click_data: { 'github.com/': { count: 5, lastClicked: Date.now() } },
+        webpage_click_data: {
+          'github.com/': { count: 5, lastClicked: Date.now() },
+        },
       });
-      const newTracker = new ClickTracker();
-      newTracker.enableTestMode();
-      await newTracker.loadClickData();
-      expect(newTracker.getClickCount('https://github.com')).toBe(5);
+      const newStorageManager = new EnhancedStorageManager();
+      newStorageManager.enableTestMode();
+      await newStorageManager.loadClickData();
+      expect(newStorageManager.getClickCount('https://github.com')).toBe(5);
 
       // Requirement 1.4: Initialize to 0 for new bookmarks
-      expect(clickTracker.getClickCount('https://newsite.com')).toBe(0);
+      expect(storageManager.getClickCount('https://newsite.com')).toBe(0);
 
       // Requirement 2.1: Combine fuzzy search with click counts
       const searchResults: ISearchResult[] = [
@@ -478,34 +517,42 @@ describe('End-to-End Bookmark History Tracking', () => {
       ];
       const enhanced = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
       expect(enhanced[0]!.finalScore).not.toBe(0.5); // Should be modified
 
       // Requirement 2.2: Weight click counts to boost frequently used
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
       const enhancedWithClicks = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
       expect(enhancedWithClicks[0]!.finalScore).toBeLessThan(0.5); // Lower is better
 
       // Requirement 3.1: Efficient Chrome storage usage
       const startTime = performance.now();
-      await clickTracker.recordClick('https://test.com');
+      await storageManager.recordClick('https://test.com');
       const endTime = performance.now();
       expect(endTime - startTime).toBeLessThan(10); // Should be very fast
 
       // Requirement 3.2: Handle storage errors gracefully
-      mockChromeStorage.sync.set.mockRejectedValueOnce(new Error('Storage failed'));
-      await expect(clickTracker.recordClick('https://error-test.com')).resolves.not.toThrow();
+      mockChromeStorage.sync.set.mockRejectedValueOnce(
+        new Error('Storage failed')
+      );
+      await expect(
+        storageManager.recordClick('https://error-test.com')
+      ).resolves.not.toThrow();
 
       // Requirement 4.1: Persist across browser sessions (tested above)
       // Requirement 5.1: Count only meaningful interactions (each click counted once)
-      const initialCount = clickTracker.getClickCount('https://meaningful.com');
-      await clickTracker.recordClick('https://meaningful.com');
-      expect(clickTracker.getClickCount('https://meaningful.com')).toBe(initialCount + 1);
+      const initialCount = storageManager.getClickCount(
+        'https://meaningful.com'
+      );
+      await storageManager.recordClick('https://meaningful.com');
+      expect(storageManager.getClickCount('https://meaningful.com')).toBe(
+        initialCount + 1
+      );
     });
   });
 });

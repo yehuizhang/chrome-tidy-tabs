@@ -3,7 +3,7 @@
  * Tests click recording functionality for both mouse and keyboard interactions
  */
 
-import { ClickTracker } from '../src/click-tracker';
+import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
 import { mockChromeStorage } from './setup';
 
 // Mock Chrome tabs API
@@ -27,11 +27,11 @@ beforeAll(() => {
 });
 
 describe('Click Tracking Integration', () => {
-  let clickTracker: ClickTracker;
+  let storageManager: EnhancedStorageManager;
 
   beforeEach(() => {
-    clickTracker = new ClickTracker();
-    clickTracker.enableTestMode(); // Enable synchronous saves for testing
+    storageManager = new EnhancedStorageManager();
+    storageManager.enableTestMode(); // Enable synchronous saves for testing
     jest.clearAllMocks();
     
     // Set up default mock behavior
@@ -42,10 +42,10 @@ describe('Click Tracking Integration', () => {
 
   describe('ClickTracker.recordClick', () => {
     test('should record click for new URL', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       const testUrl = 'https://example.com/page';
-      await clickTracker.recordClick(testUrl);
+      await storageManager.recordClick(testUrl);
 
       expect(mockChromeStorage.sync.set).toHaveBeenCalledWith({
         webpage_click_data: {
@@ -70,10 +70,10 @@ describe('Click Tracking Integration', () => {
         webpage_click_data: existingData,
       });
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       const testUrl = 'https://example.com/page';
-      await clickTracker.recordClick(testUrl);
+      await storageManager.recordClick(testUrl);
 
       expect(mockChromeStorage.sync.set).toHaveBeenCalledWith({
         webpage_click_data: {
@@ -86,7 +86,7 @@ describe('Click Tracking Integration', () => {
     });
 
     test('should normalize URLs before recording', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       // Test various URL formats that should normalize to the same key
       const urls = [
@@ -96,7 +96,7 @@ describe('Click Tracking Integration', () => {
       ];
 
       for (const url of urls) {
-        await clickTracker.recordClick(url);
+        await storageManager.recordClick(url);
       }
 
       // All should be recorded under the same normalized key
@@ -108,21 +108,21 @@ describe('Click Tracking Integration', () => {
     });
 
     test('should handle storage errors gracefully', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       mockChromeStorage.sync.set.mockRejectedValue(new Error('Storage failed'));
       
       const testUrl = 'https://example.com/page';
       
       // Should not throw error
-      await expect(clickTracker.recordClick(testUrl)).resolves.not.toThrow();
+      await expect(storageManager.recordClick(testUrl)).resolves.not.toThrow();
     });
 
     test('should auto-load data if not already loaded', async () => {
       const testUrl = 'https://example.com/page';
       
       // Don't call loadClickData first
-      await clickTracker.recordClick(testUrl);
+      await storageManager.recordClick(testUrl);
 
       expect(mockChromeStorage.sync.get).toHaveBeenCalled();
       expect(mockChromeStorage.sync.set).toHaveBeenCalledWith({
@@ -149,22 +149,22 @@ describe('Click Tracking Integration', () => {
         webpage_click_data: existingData,
       });
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
-      const count = clickTracker.getClickCount('https://example.com/page?param=value');
+      const count = storageManager.getClickCount('https://example.com/page?param=value');
       expect(count).toBe(5);
     });
 
     test('should return 0 for non-existent URL', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
-      const count = clickTracker.getClickCount('https://nonexistent.com/page');
+      const count = storageManager.getClickCount('https://nonexistent.com/page');
       expect(count).toBe(0);
     });
 
     test('should return 0 when data not loaded', () => {
       // Don't load data first
-      const count = clickTracker.getClickCount('https://example.com/page');
+      const count = storageManager.getClickCount('https://example.com/page');
       expect(count).toBe(0);
     });
   });
@@ -175,8 +175,8 @@ describe('Click Tracking Integration', () => {
       // since we're focusing on the click tracking logic
       const testUrl = 'https://example.com/bookmark';
       
-      await clickTracker.loadClickData();
-      await clickTracker.recordClick(testUrl);
+      await storageManager.loadClickData();
+      await storageManager.recordClick(testUrl);
 
       expect(mockChromeStorage.sync.set).toHaveBeenCalledWith({
         webpage_click_data: {
@@ -192,8 +192,8 @@ describe('Click Tracking Integration', () => {
       // This test simulates keyboard navigation click recording
       const testUrl = 'https://github.com/user/repo';
       
-      await clickTracker.loadClickData();
-      await clickTracker.recordClick(testUrl);
+      await storageManager.loadClickData();
+      await storageManager.recordClick(testUrl);
 
       expect(mockChromeStorage.sync.set).toHaveBeenCalledWith({
         webpage_click_data: {
@@ -208,12 +208,12 @@ describe('Click Tracking Integration', () => {
     test('should handle multiple rapid clicks correctly', async () => {
       const testUrl = 'https://example.com/rapid';
       
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       // Simulate rapid clicks
-      await clickTracker.recordClick(testUrl);
-      await clickTracker.recordClick(testUrl);
-      await clickTracker.recordClick(testUrl);
+      await storageManager.recordClick(testUrl);
+      await storageManager.recordClick(testUrl);
+      await storageManager.recordClick(testUrl);
 
       // Should record each click
       expect(mockChromeStorage.sync.set).toHaveBeenCalledTimes(3);
@@ -228,19 +228,19 @@ describe('Click Tracking Integration', () => {
       // We can't directly test the BookmarkSearch class here due to DOM dependencies,
       // but we can test that ClickTracker handles errors gracefully
       
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       mockChromeStorage.sync.set.mockRejectedValue(new Error('Storage failed'));
       
       const testUrl = 'https://example.com/error-test';
       
       // Should not throw error, allowing bookmark opening to continue
-      await expect(clickTracker.recordClick(testUrl)).resolves.not.toThrow();
+      await expect(storageManager.recordClick(testUrl)).resolves.not.toThrow();
     });
   });
 
   describe('URL Normalization in Click Tracking', () => {
     test('should normalize different URL variations to same key', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       const urlVariations = [
         'https://example.com/path',
@@ -252,7 +252,7 @@ describe('Click Tracking Integration', () => {
 
       // Record clicks for all variations
       for (const url of urlVariations) {
-        await clickTracker.recordClick(url);
+        await storageManager.recordClick(url);
       }
 
       // All should be stored under the same normalized key
@@ -264,11 +264,11 @@ describe('Click Tracking Integration', () => {
     });
 
     test('should handle invalid URLs gracefully', async () => {
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       const invalidUrl = 'not-a-valid-url';
       
-      await clickTracker.recordClick(invalidUrl);
+      await storageManager.recordClick(invalidUrl);
 
       // Should store the original URL as fallback
       expect(mockChromeStorage.sync.set).toHaveBeenCalledWith({
@@ -296,10 +296,10 @@ describe('Click Tracking Integration', () => {
         webpage_click_data: previousSessionData,
       });
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
       
       // Add new click in current session
-      await clickTracker.recordClick('https://example.com/persistent');
+      await storageManager.recordClick('https://example.com/persistent');
 
       // Should increment existing count
       expect(mockChromeStorage.sync.set).toHaveBeenCalledWith({

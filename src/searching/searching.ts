@@ -1,9 +1,9 @@
 import { throwIfNull } from '../error_handling';
 import { KeyboardHandler } from './keyboard-handler';
 import Fuse from 'fuse.js';
-import { IBookmark, ISearchResult } from './types';
+import { IBookmarkTreeNode, ISearchResult } from './types';
 import { SelectionManager } from './selection-manager';
-import { ClickTracker } from './click-tracker';
+import { EnhancedStorageManager } from './enhanced-storage-manager';
 import { SearchScorer } from './search-scorer';
 import { flattenBookmarks } from './utils';
 import { BookmarkRenderer } from './bookmark-renderer';
@@ -14,12 +14,12 @@ export class Searching {
   private readonly keyboardHandler: KeyboardHandler;
 
   private readonly selectionManager = new SelectionManager();
-  private readonly clickTracker = new ClickTracker();
+  private readonly storageManager = new EnhancedStorageManager();
   private readonly searchScorer = new SearchScorer();
 
-  private allBookmarks: IBookmark[] = [];
-  private filteredBookmarks: IBookmark[] = [];
-  private fuse: Fuse<IBookmark> | null = null;
+  private allBookmarks: IBookmarkTreeNode[] = [];
+  private filteredBookmarks: IBookmarkTreeNode[] = [];
+  private fuse: Fuse<IBookmarkTreeNode> | null = null;
 
   constructor() {
     this.searchBox = document.getElementById('searchBox') as HTMLInputElement;
@@ -48,7 +48,7 @@ export class Searching {
 
     // Load click data with error handling - don't let this block the UI
     try {
-      await this.clickTracker.loadClickData();
+      await this.storageManager.loadClickData();
     } catch (error) {
       console.warn(
         'Failed to load click tracking data, continuing with basic search:',
@@ -67,7 +67,7 @@ export class Searching {
       const bookmarkTree = await chrome.bookmarks.getTree();
       this.allBookmarks = flattenBookmarks(bookmarkTree);
 
-      this.fuse = new Fuse<IBookmark>(this.allBookmarks, {
+      this.fuse = new Fuse<IBookmarkTreeNode>(this.allBookmarks, {
         keys: [
           { name: 'title', weight: 0.7 },
           { name: 'url', weight: 0.3 },
@@ -104,10 +104,7 @@ export class Searching {
 
   private searchBookmarks(query: string): void {
     if (!this.fuse) {
-      this.filteredBookmarks = [];
-      this.selectionManager.reset();
-      this.displayBookmarks();
-      return;
+      throw new Error('unable to search due to bookmark failed to load');
     }
 
     try {
@@ -122,7 +119,7 @@ export class Searching {
 
       // Try to enhance results with click count data
       try {
-        const clickData = this.clickTracker.getAllClickData();
+        const clickData = this.storageManager.getAllClickData();
         const enhancedResults = this.searchScorer.enhanceSearchResults(
           searchResults,
           clickData
@@ -209,7 +206,7 @@ export class Searching {
   private async openBookmark(url: string): Promise<void> {
     try {
       // Record the click before opening the bookmark (non-blocking)
-      this.clickTracker.recordClick(url).catch(error => {
+      this.storageManager.recordClick(url).catch(error => {
         console.debug('Click tracking failed silently:', error);
       });
 

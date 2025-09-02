@@ -1,6 +1,6 @@
-import { SearchScorer } from '../src/search-scorer';
-import { ClickTracker } from '../src/click-tracker';
-import { IBookmark, ISearchResult, IClickData } from '../src/types';
+import { SearchScorer } from '../src/searching/search-scorer';
+import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
+import { IBookmarkTreeNode, ISearchResult, IClickData } from '../src/searching/types';
 
 // Mock Chrome APIs
 const mockChromeStorage = {
@@ -19,9 +19,9 @@ const mockChromeStorage = {
 
 describe('Search Integration Tests', () => {
   let searchScorer: SearchScorer;
-  let clickTracker: ClickTracker;
+  let storageManager: EnhancedStorageManager;
 
-  const mockBookmarks: IBookmark[] = [
+  const mockBookmarks: IBookmarkTreeNode[] = [
     { id: '1', title: 'GitHub', url: 'https://github.com' },
     { id: '2', title: 'Stack Overflow', url: 'https://stackoverflow.com' },
     { id: '3', title: 'MDN Web Docs', url: 'https://developer.mozilla.org' },
@@ -30,8 +30,8 @@ describe('Search Integration Tests', () => {
 
   beforeEach(() => {
     searchScorer = new SearchScorer();
-    clickTracker = new ClickTracker();
-    clickTracker.enableTestMode();
+    storageManager = new EnhancedStorageManager();
+    storageManager.enableTestMode();
     jest.clearAllMocks();
   });
 
@@ -48,7 +48,7 @@ describe('Search Integration Tests', () => {
         webpage_click_data: clickData,
       });
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Simulate fuzzy search results (all have similar scores)
       const searchResults: ISearchResult[] = [
@@ -79,7 +79,7 @@ describe('Search Integration Tests', () => {
 
     it('should handle search when no click data exists', async () => {
       mockChromeStorage.sync.get.mockResolvedValue({});
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const searchResults: ISearchResult[] = [
         { item: mockBookmarks[0]!, score: 0.3 },
@@ -100,7 +100,7 @@ describe('Search Integration Tests', () => {
 
     it('should gracefully handle storage errors and continue with fuzzy search', async () => {
       mockChromeStorage.sync.get.mockRejectedValue(new Error('Storage error'));
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       const searchResults: ISearchResult[] = [
         { item: mockBookmarks[0]!, score: 0.3 },
@@ -109,7 +109,7 @@ describe('Search Integration Tests', () => {
 
       const enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
 
       // Should work with empty click data when storage fails
@@ -154,7 +154,7 @@ describe('Search Integration Tests', () => {
       mockChromeStorage.sync.get.mockResolvedValue({});
       mockChromeStorage.sync.set.mockResolvedValue(undefined);
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Initial search results
       const searchResults: ISearchResult[] = [
@@ -165,19 +165,19 @@ describe('Search Integration Tests', () => {
       // Initially, Stack Overflow should rank higher due to better fuzzy score
       let enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
       expect(enhancedResults[0]!.item.title).toBe('Stack Overflow');
 
       // Record multiple clicks on GitHub
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
-      await clickTracker.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
 
       // Now GitHub should rank higher due to click history
       enhancedResults = searchScorer.enhanceSearchResults(
         searchResults,
-        clickTracker.getAllClickData()
+        storageManager.getAllClickData()
       );
       expect(enhancedResults[0]!.item.title).toBe('GitHub');
       expect(enhancedResults[0]!.clickCount).toBe(3);
@@ -185,7 +185,7 @@ describe('Search Integration Tests', () => {
 
     it('should handle edge cases in search results', async () => {
       mockChromeStorage.sync.get.mockResolvedValue({});
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Test with empty search results
       let enhancedResults = searchScorer.enhanceSearchResults([], {});
@@ -217,17 +217,17 @@ describe('Search Integration Tests', () => {
         webpage_click_data: persistedClickData,
       });
 
-      await clickTracker.loadClickData();
+      await storageManager.loadClickData();
 
       // Verify persisted data is loaded
-      expect(clickTracker.getClickCount('https://github.com')).toBe(5);
+      expect(storageManager.getClickCount('https://github.com')).toBe(5);
 
       // Add new click
       mockChromeStorage.sync.set.mockResolvedValue(undefined);
-      await clickTracker.recordClick('https://github.com');
+      await storageManager.recordClick('https://github.com');
 
       // Verify count is incremented
-      expect(clickTracker.getClickCount('https://github.com')).toBe(6);
+      expect(storageManager.getClickCount('https://github.com')).toBe(6);
     });
   });
 

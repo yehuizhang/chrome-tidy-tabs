@@ -3,18 +3,18 @@
  * Tests Chrome storage operations, error handling, and fallback mechanisms
  */
 
-import { StorageManager } from '../src/storage-manager';
-import { IClickData } from '../src/types';
+import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
+import { IClickData } from '../src/searching/types';
 import { mockChromeStorage } from './setup';
 
 // Type augmentation for testing
 declare const global: any;
 
 describe('StorageManager', () => {
-  let storageManager: StorageManager;
+  let storageManager: EnhancedStorageManager;
 
   beforeEach(() => {
-    storageManager = new StorageManager();
+    storageManager = new EnhancedStorageManager();
   });
 
   describe('Constructor and Storage Availability', () => {
@@ -26,8 +26,8 @@ describe('StorageManager', () => {
       const originalChrome = global.chrome;
       global.chrome = undefined;
 
-      const manager = new StorageManager();
-      expect(manager.isStorageAvailable()).toBe(false);
+      const storageManager = new EnhancedStorageManager();
+      expect(storageManager.isStorageAvailable()).toBe(false);
 
       global.chrome = originalChrome;
     });
@@ -36,8 +36,8 @@ describe('StorageManager', () => {
       const originalChrome = global.chrome;
       global.chrome = { storage: {} } as any;
 
-      const manager = new StorageManager();
-      expect(manager.isStorageAvailable()).toBe(false);
+      const storageManager = new EnhancedStorageManager();
+      expect(storageManager.isStorageAvailable()).toBe(false);
 
       global.chrome = originalChrome;
     });
@@ -118,8 +118,8 @@ describe('StorageManager', () => {
       const originalChrome = global.chrome;
       global.chrome = undefined;
 
-      const manager = new StorageManager();
-      const result = await manager.loadClickData();
+      const storageManager = new EnhancedStorageManager();
+      const result = await storageManager.loadClickData();
 
       expect(result).toEqual({});
 
@@ -185,8 +185,8 @@ describe('StorageManager', () => {
         'example.com/': { count: 5, lastClicked: 1703123456789 },
       };
 
-      const manager = new StorageManager();
-      await manager.saveClickData(testData);
+      const storageManager = new EnhancedStorageManager();
+      await storageManager.saveClickData(testData);
 
       // Should not throw error
       expect(true).toBe(true);
@@ -235,8 +235,8 @@ describe('StorageManager', () => {
       const originalChrome = global.chrome;
       global.chrome = undefined;
 
-      const manager = new StorageManager();
-      await manager.clearClickData();
+      const storageManager = new EnhancedStorageManager();
+      await storageManager.clearClickData();
 
       // Should not throw error
       expect(true).toBe(true);
@@ -277,8 +277,8 @@ describe('StorageManager', () => {
       const originalChrome = global.chrome;
       global.chrome = undefined;
 
-      const manager = new StorageManager();
-      const info = await manager.getStorageInfo();
+      const storageManager = new EnhancedStorageManager();
+      const info = await storageManager.getStorageInfo();
 
       expect(info).toEqual({
         bytesInUse: 0,
