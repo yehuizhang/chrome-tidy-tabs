@@ -13,7 +13,7 @@ const mockChromeStorage = {
   },
 };
 
-(global as unknown).chrome = {
+(global as any).chrome = {
   storage: mockChromeStorage,
 };
 

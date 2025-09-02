@@ -19,10 +19,7 @@ describe('Cross-Session Persistence Tests', () => {
     clickTracker.enableTestMode();
     searchScorer = new SearchScorer();
     storageManager = new StorageManager();
-    jest.clearAllMocks();
-    
-    mockChromeStorage.sync.get.mockResolvedValue({});
-    mockChromeStorage.sync.set.mockResolvedValue(undefined);
+    // Don't override the persistent mock storage behavior from setup.ts
   });
 
   describe('Browser Session Persistence', () => {
@@ -390,17 +387,14 @@ describe('Cross-Session Persistence Tests', () => {
         };
       }
 
-      // First save succeeds
-      mockChromeStorage.sync.set.mockResolvedValueOnce(undefined);
-      
-      // Second save fails with quota exceeded
+      // First save fails with quota exceeded, then cleanup succeeds
       mockChromeStorage.sync.set
         .mockRejectedValueOnce(new Error('QUOTA_EXCEEDED'))
         .mockResolvedValueOnce(undefined); // Cleanup succeeds
 
       await storageManager.saveClickData(largeHistoricalData);
 
-      // Should handle quota exceeded and attempt cleanup
+      // Should handle quota exceeded and attempt cleanup (1 failed + 1 cleanup = 2 total)
       expect(mockChromeStorage.sync.set).toHaveBeenCalledTimes(2);
     });
 

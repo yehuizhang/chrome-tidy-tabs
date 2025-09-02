@@ -51,6 +51,7 @@ describe('Error Handling Tests', () => {
       mockChrome.storage.sync.get.mockRejectedValue(storageError);
 
       const tracker = new ClickTracker();
+      tracker.enableTestMode();
       await tracker.loadClickData();
       
       // Should handle error gracefully and continue with empty data
@@ -113,6 +114,7 @@ describe('Error Handling Tests', () => {
       });
 
       const tracker = new ClickTracker();
+      tracker.enableTestMode();
       await tracker.loadClickData();
       
       // Ensure chrome is available for this test

@@ -7,7 +7,7 @@ import { ClickTracker } from '../src/click-tracker';
 import { SearchScorer } from '../src/search-scorer';
 import { StorageManager } from '../src/storage-manager';
 import { IBookmark, ISearchResult, IClickData } from '../src/types';
-import { mockChromeStorage } from './setup';
+import { mockChromeStorage, mockStorageData } from './setup';
 
 describe('End-to-End Bookmark History Tracking', () => {
   let clickTracker: ClickTracker;
@@ -27,11 +27,7 @@ describe('End-to-End Bookmark History Tracking', () => {
     clickTracker.enableTestMode();
     searchScorer = new SearchScorer();
     storageManager = new StorageManager();
-    jest.clearAllMocks();
-    
-    // Set up default mock behavior
-    mockChromeStorage.sync.get.mockResolvedValue({});
-    mockChromeStorage.sync.set.mockResolvedValue(undefined);
+    // Don't override the persistent mock storage behavior from setup.ts
   });
 
   describe('Complete Click Tracking and Search Enhancement Flow', () => {
@@ -218,6 +214,7 @@ describe('End-to-End Bookmark History Tracking', () => {
 
       // Simulate session end and new session start
       const newClickTracker = new ClickTracker();
+      newClickTracker.enableTestMode();
       mockChromeStorage.sync.get.mockResolvedValue({
         webpage_click_data: session1Data,
       });
@@ -401,6 +398,7 @@ describe('End-to-End Bookmark History Tracking', () => {
       (global as any).chrome = undefined;
 
       const newClickTracker = new ClickTracker();
+      newClickTracker.enableTestMode();
       const newStorageManager = new StorageManager();
 
       // Should handle gracefully
@@ -462,10 +460,12 @@ describe('End-to-End Bookmark History Tracking', () => {
       expect(mockChromeStorage.sync.set).toHaveBeenCalled();
 
       // Requirement 1.3: Data retrieved from Chrome storage
-      mockChromeStorage.sync.get.mockResolvedValue({
+      // Manually set the mock storage data to test loading
+      Object.assign(mockStorageData, {
         webpage_click_data: { 'github.com/': { count: 5, lastClicked: Date.now() } },
       });
       const newTracker = new ClickTracker();
+      newTracker.enableTestMode();
       await newTracker.loadClickData();
       expect(newTracker.getClickCount('https://github.com')).toBe(5);
 

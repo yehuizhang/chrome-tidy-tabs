@@ -6,15 +6,11 @@
   </head>
 
   <body>
-    <div class="button-container">
+    <div class="tab-tooling-container">
       <button id="sortTabs" class="icon-button" data-tooltip="Sort">
         <img src="assets/sort-128.png" alt="Sort" />
       </button>
-      <button
-        id="removeDuplicates"
-        class="icon-button"
-        data-tooltip="De-Duplicate"
-      >
+      <button id="deDuplicates" class="icon-button" data-tooltip="De-Duplicate">
         <img src="assets/deduplicate-128.png" alt="De-Duplicate" />
       </button>
       <button id="mergeWindows" class="icon-button" data-tooltip="Merge">
@@ -31,8 +27,8 @@
       />
     </div>
 
-    <div class="results-container">
-      <div id="results"></div>
+    <div class="search-results-container">
+      <div id="search-result"></div>
     </div>
 
     <script src="popup.js"></script>

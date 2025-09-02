@@ -29,7 +29,7 @@ h1 {
   text-align: center;
 }
 
-.button-container {
+.tab-tooling-container {
   display: flex;
   flex-direction: row;
   justify-content: flex-end;
@@ -140,7 +140,7 @@ h1 {
   transform: translateY(-1px);
 }
 
-.results-container {
+.search-results-container {
   overflow-y: auto;
   scrollbar-width: thin;
   /* Firefox */
@@ -149,21 +149,21 @@ h1 {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
-.results-container::-webkit-scrollbar {
+.search-results-container::-webkit-scrollbar {
   width: 6px;
 }
 
-.results-container::-webkit-scrollbar-track {
+.search-results-container::-webkit-scrollbar-track {
   background: transparent;
   border-radius: 3px;
 }
 
-.results-container::-webkit-scrollbar-thumb {
+.search-results-container::-webkit-scrollbar-thumb {
   background: rgba(95, 99, 104, 0.2);
   border-radius: 3px;
 }
 
-.results-container::-webkit-scrollbar-thumb:hover {
+.search-results-container::-webkit-scrollbar-thumb:hover {
   background: rgba(95, 99, 104, 0.4);
 }
 

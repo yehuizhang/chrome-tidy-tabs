@@ -6,13 +6,9 @@ import { KeyboardHandler } from './keyboard-handler';
 import { SelectionManager } from './selection-manager';
 import { ClickTracker } from './click-tracker';
 import { SearchScorer } from './search-scorer';
+import { TabManagement } from './tab_management';
 
-interface DomainInfo {
-  domain: string;
-  subdomain: string;
-}
-
-class BookmarkSearch {
+class Popup {
   private readonly searchBox: HTMLInputElement;
   private readonly resultsContainer: HTMLElement;
   private readonly selectionManager = new SelectionManager();
@@ -25,8 +21,13 @@ class BookmarkSearch {
   private fuse: Fuse<IBookmark> | null = null;
 
   constructor() {
+    // This setup tab management buttons
+    new TabManagement();
+
     this.searchBox = document.getElementById('searchBox') as HTMLInputElement;
-    this.resultsContainer = document.getElementById('results') as HTMLElement;
+    this.resultsContainer = document.getElementById(
+      'search-result'
+    ) as HTMLElement;
 
     this.keyboardHandler = new KeyboardHandler(
       () => this.openSelectedBookmark(),
@@ -59,7 +60,6 @@ class BookmarkSearch {
     }
 
     this.setupEventListeners();
-    this.setupTabManagementButtons();
     this.hideResults();
     this.searchBox.focus();
   }
@@ -235,113 +235,6 @@ class BookmarkSearch {
     this.resultsContainer.innerHTML = `<div class="no-results">${message}</div>`;
     this.adjustPopupSize();
   }
-
-  private getDomainAndSubdomain(url: string): DomainInfo {
-    try {
-      const urlObj = new URL(url);
-      const hostnameParts = urlObj.hostname.split('.');
-      if (hostnameParts.length > 2) {
-        return {
-          domain:
-            hostnameParts[hostnameParts.length - 2] +
-            '.' +
-            hostnameParts[hostnameParts.length - 1],
-          subdomain: hostnameParts.slice(0, hostnameParts.length - 2).join('.'),
-        };
-      } else {
-        return {
-          domain: urlObj.hostname,
-          subdomain: '',
-        };
-      }
-    } catch (e) {
-      console.error('Invalid URL:', url, e);
-      return { domain: '', subdomain: '' };
-    }
-  }
-
-  private async sortTabsByDomainAndSubdomain(
-    tabs: chrome.tabs.Tab[]
-  ): Promise<void> {
-    const sortedTabs = tabs.sort((a, b) => {
-      const urlA = this.getDomainAndSubdomain(a.url || '');
-      const urlB = this.getDomainAndSubdomain(b.url || '');
-
-      const domainCompare = urlA.domain.localeCompare(urlB.domain);
-      if (domainCompare !== 0) {
-        return domainCompare;
-      }
-
-      return urlA.subdomain.localeCompare(urlB.subdomain);
-    });
-
-    for (let i = sortedTabs.length - 1; i >= 0; i--) {
-      const tab = sortedTabs[i];
-      if (tab?.id) {
-        await chrome.tabs.move(tab.id, { index: i });
-      }
-    }
-  }
-
-  private setupTabManagementButtons(): void {
-    const sortButton = document.getElementById('sortTabs');
-    const removeDuplicatesButton = document.getElementById('removeDuplicates');
-    const mergeWindowsButton = document.getElementById('mergeWindows');
-
-    sortButton?.addEventListener('click', async () => {
-      try {
-        const tabs = await chrome.tabs.query({ currentWindow: true });
-        await this.sortTabsByDomainAndSubdomain(tabs);
-      } catch (error) {
-        console.error('Error sorting tabs:', error);
-      }
-    });
-
-    removeDuplicatesButton?.addEventListener('click', async () => {
-      try {
-        const tabs = await chrome.tabs.query({ currentWindow: true });
-        const seenUrls = new Set<string>();
-        const duplicateTabIds: number[] = [];
-
-        for (const tab of tabs) {
-          if (tab.url && seenUrls.has(tab.url)) {
-            if (tab.id) duplicateTabIds.push(tab.id);
-          } else if (tab.url) {
-            seenUrls.add(tab.url);
-          }
-        }
-
-        if (duplicateTabIds.length > 0) {
-          await chrome.tabs.remove(duplicateTabIds);
-        }
-      } catch (error) {
-        console.error('Error removing duplicate tabs:', error);
-      }
-    });
-
-    mergeWindowsButton?.addEventListener('click', async () => {
-      try {
-        const currentWindow = await chrome.windows.getCurrent();
-        if (!currentWindow.id) return;
-
-        const allTabs = await chrome.tabs.query({});
-        const tabsToMove = allTabs.filter(
-          tab => tab.windowId !== currentWindow.id
-        );
-
-        for (const tab of tabsToMove) {
-          if (tab.id) {
-            await chrome.tabs.move(tab.id, {
-              windowId: currentWindow.id,
-              index: -1,
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error merging windows:', error);
-      }
-    });
-  }
 }
 
-document.addEventListener('DOMContentLoaded', () => new BookmarkSearch());
+document.addEventListener('DOMContentLoaded', () => new Popup());

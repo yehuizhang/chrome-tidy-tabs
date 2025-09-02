@@ -19,10 +19,7 @@ describe('Edge Cases and Error Conditions', () => {
     clickTracker.enableTestMode();
     searchScorer = new SearchScorer();
     storageManager = new StorageManager();
-    jest.clearAllMocks();
-    
-    mockChromeStorage.sync.get.mockResolvedValue({});
-    mockChromeStorage.sync.set.mockResolvedValue(undefined);
+    // Don't override the persistent mock storage behavior from setup.ts
   });
 
   describe('URL Edge Cases', () => {
@@ -66,14 +63,22 @@ describe('Edge Cases and Error Conditions', () => {
         { input: 'https://example.com/path_with_underscores', expected: 'example.com/path_with_underscores' },
       ];
 
+      // Track expected counts for normalized URLs
+      const expectedCounts: { [key: string]: number } = {};
+      
       for (const testCase of urlTestCases) {
         await clickTracker.recordClick(testCase.input);
-        expect(clickTracker.getClickCount(testCase.input)).toBe(1);
+        
+        // Update expected count for this normalized URL
+        expectedCounts[testCase.expected] = (expectedCounts[testCase.expected] || 0) + 1;
+        
+        // Verify the click count matches expected for this normalized URL
+        expect(clickTracker.getClickCount(testCase.input)).toBe(expectedCounts[testCase.expected]);
         
         // Verify the normalized URL is used internally
         const allData = clickTracker.getAllClickData();
         expect(allData[testCase.expected]).toBeDefined();
-        expect(allData[testCase.expected]?.count).toBe(1);
+        expect(allData[testCase.expected]?.count).toBe(expectedCounts[testCase.expected]);
       }
     });
 
@@ -311,8 +316,6 @@ describe('Edge Cases and Error Conditions', () => {
 
   describe('Boundary Value Testing', () => {
     it('should handle maximum click counts', async () => {
-      await clickTracker.loadClickData();
-
       const maxSafeInteger = Number.MAX_SAFE_INTEGER;
       const testData: IClickData = {
         'max.com/': { count: maxSafeInteger, lastClicked: Date.now() },

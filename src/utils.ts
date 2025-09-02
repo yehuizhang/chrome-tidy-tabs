@@ -38,7 +38,39 @@ export const flattenBookmarks = (bookmarks: IBookmark[]) =>
 export const normalizeUrl = (url: string): string => {
   try {
     const urlObj = new URL(url);
-    return urlObj.hostname + urlObj.pathname;
+    let normalized = urlObj.hostname;
+
+    // Include port if it's not the default port
+    if (
+      urlObj.port &&
+      !(
+        (urlObj.protocol === 'https:' && urlObj.port === '443') ||
+        (urlObj.protocol === 'http:' && urlObj.port === '80')
+      )
+    ) {
+      normalized += ':' + urlObj.port;
+    }
+
+    // Add pathname, ensuring root path has trailing slash
+    let pathname = urlObj.pathname;
+    if (pathname === '/') {
+      pathname = '/';
+    } else if (pathname.endsWith('/')) {
+      // Keep trailing slash as-is
+    } else {
+      // No trailing slash for non-root paths
+    }
+
+    normalized += pathname;
+
+    // Ensure root URLs have trailing slash
+    if (pathname === '/') {
+      if (!normalized.endsWith('/')) {
+        normalized += '/';
+      }
+    }
+
+    return normalized;
   } catch {
     console.warn('Invalid URL for normalization:', url);
     return url; // Fallback to original URL if parsing fails
