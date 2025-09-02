@@ -4,9 +4,9 @@
  */
 
 import { ClickTracker } from '../src/click-tracker';
-import { SearchScorer } from '../src/search-scorer';
+import { SearchScorer } from '../src/searching/search-scorer';
 import { StorageManager } from '../src/storage-manager';
-import { IBookmark, ISearchResult, IClickData } from '../src/types';
+import { IBookmark, ISearchResult, IClickData } from '../src/searching/types';
 import { mockChromeStorage, mockStorageData } from './setup';
 
 describe('End-to-End Bookmark History Tracking', () => {

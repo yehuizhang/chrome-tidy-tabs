@@ -1,4 +1,4 @@
-import { IClickData } from './types';
+import { IClickData } from './searching/types';
 
 export interface IStorageManager {
   loadClickData(): Promise<IClickData>;
