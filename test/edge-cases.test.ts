@@ -3,18 +3,18 @@
  * Tests unusual scenarios, error conditions, and boundary cases
  */
 
-import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
+import { StorageManager } from '../src/searching/storage-manager';
 import { SearchScorer } from '../src/searching/search-scorer';
 import { ISearchResult, IClickData } from '../src/searching/types';
 import { mockChromeStorage } from './setup';
 import { createMockBookmark } from './test-helpers';
 
 describe('Edge Cases and Error Conditions', () => {
-  let storageManager: EnhancedStorageManager;
+  let storageManager: StorageManager;
   let searchScorer: SearchScorer;
 
   beforeEach(() => {
-    storageManager = new EnhancedStorageManager();
+    storageManager = new StorageManager();
     storageManager.enableTestMode();
     searchScorer = new SearchScorer();
     // Don't override the persistent mock storage behavior from setup.ts
@@ -190,7 +190,7 @@ describe('Edge Cases and Error Conditions', () => {
       for (const corruptedData of corruptedDataCases) {
         mockChromeStorage.sync.get.mockResolvedValueOnce(corruptedData);
         
-        const storageManager = new EnhancedStorageManager();
+        const storageManager = new StorageManager();
         storageManager.enableTestMode();
         await expect(storageManager.loadClickData()).resolves.not.toThrow();
         expect(storageManager.getAllClickData()).toEqual({});
@@ -283,7 +283,7 @@ describe('Edge Cases and Error Conditions', () => {
       const originalChrome = (global as any).chrome;
       (global as any).chrome = undefined;
 
-      const localStorageManager = new EnhancedStorageManager();
+      const localStorageManager = new StorageManager();
       localStorageManager.enableTestMode();
 
       await expect(localStorageManager.loadClickData()).resolves.not.toThrow();
@@ -300,7 +300,7 @@ describe('Edge Cases and Error Conditions', () => {
         storage: undefined,
       };
 
-      const storageManager = new EnhancedStorageManager();
+      const storageManager = new StorageManager();
       storageManager.enableTestMode();
       await expect(storageManager.loadClickData()).resolves.not.toThrow();
       expect(storageManager.getAllClickData()).toEqual({});
@@ -345,7 +345,7 @@ describe('Edge Cases and Error Conditions', () => {
           webpage_click_data: testData,
         });
 
-        const storageManager = new EnhancedStorageManager();
+        const storageManager = new StorageManager();
         storageManager.enableTestMode();
         await storageManager.loadClickData();
 

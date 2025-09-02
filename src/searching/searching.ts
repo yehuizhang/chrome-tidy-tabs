@@ -3,7 +3,7 @@ import { KeyboardHandler } from './keyboard-handler';
 import Fuse from 'fuse.js';
 import { IBookmarkTreeNode, ISearchResult } from './types';
 import { SelectionManager } from './selection-manager';
-import { EnhancedStorageManager } from './enhanced-storage-manager';
+import { StorageManager } from './storage-manager';
 import { SearchScorer } from './search-scorer';
 import { flattenBookmarks } from './utils';
 import { BookmarkRenderer } from './bookmark-renderer';
@@ -14,7 +14,7 @@ export class Searching {
   private readonly keyboardHandler: KeyboardHandler;
 
   private readonly selectionManager = new SelectionManager();
-  private readonly storageManager = new EnhancedStorageManager();
+  private readonly storageManager = new StorageManager();
   private readonly searchScorer = new SearchScorer();
 
   private allBookmarks: IBookmarkTreeNode[] = [];

@@ -3,7 +3,7 @@
  * Tests the complete flow from click tracking to search enhancement
  */
 
-import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
+import { StorageManager } from '../src/searching/storage-manager';
 import { SearchScorer } from '../src/searching/search-scorer';
 import {
   IBookmarkTreeNode,
@@ -13,7 +13,7 @@ import {
 import { mockChromeStorage, mockStorageData } from './setup';
 
 describe('End-to-End Bookmark History Tracking', () => {
-  let storageManager: EnhancedStorageManager;
+  let storageManager: StorageManager;
   let searchScorer: SearchScorer;
 
   const mockBookmarks: IBookmarkTreeNode[] = [
@@ -50,7 +50,7 @@ describe('End-to-End Bookmark History Tracking', () => {
   ];
 
   beforeEach(() => {
-    storageManager = new EnhancedStorageManager();
+    storageManager = new StorageManager();
     storageManager.enableTestMode();
     searchScorer = new SearchScorer();
     // Don't override the persistent mock storage behavior from setup.ts
@@ -239,7 +239,7 @@ describe('End-to-End Bookmark History Tracking', () => {
       expect(session1Data['github.com/']?.count).toBe(2);
 
       // Simulate session end and new session start
-      const newStorageManager = new EnhancedStorageManager();
+      const newStorageManager = new StorageManager();
       newStorageManager.enableTestMode();
       mockChromeStorage.sync.get.mockResolvedValue({
         webpage_click_data: session1Data,
@@ -433,7 +433,7 @@ describe('End-to-End Bookmark History Tracking', () => {
       // Simulate Chrome storage not available
       (global as unknown).chrome = undefined;
 
-      const newStorageManager = new EnhancedStorageManager();
+      const newStorageManager = new StorageManager();
       newStorageManager.enableTestMode();
 
       // Should handle gracefully
@@ -503,7 +503,7 @@ describe('End-to-End Bookmark History Tracking', () => {
           'github.com/': { count: 5, lastClicked: Date.now() },
         },
       });
-      const newStorageManager = new EnhancedStorageManager();
+      const newStorageManager = new StorageManager();
       newStorageManager.enableTestMode();
       await newStorageManager.loadClickData();
       expect(newStorageManager.getClickCount('https://github.com')).toBe(5);

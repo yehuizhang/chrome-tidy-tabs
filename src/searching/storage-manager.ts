@@ -12,7 +12,7 @@ export interface IStorageManager {
   getStorageInfo(): Promise<{ bytesInUse: number; quotaBytes: number }>;
 }
 
-export class EnhancedStorageManager implements IStorageManager {
+export class StorageManager implements IStorageManager {
   private static readonly STORAGE_KEY = 'tidy_tabs_click_data';
   private static readonly STORAGE_VERSION_KEY = 'tidy_tabs_click_data_version';
   private static readonly CURRENT_VERSION = 1;
@@ -69,23 +69,23 @@ export class EnhancedStorageManager implements IStorageManager {
     }
 
     let retryCount = 0;
-    while (retryCount < EnhancedStorageManager.MAX_RETRIES) {
+    while (retryCount < StorageManager.MAX_RETRIES) {
       try {
         const result = await chrome.storage.sync.get([
-          EnhancedStorageManager.STORAGE_KEY,
-          EnhancedStorageManager.STORAGE_VERSION_KEY,
+          StorageManager.STORAGE_KEY,
+          StorageManager.STORAGE_VERSION_KEY,
         ]);
 
         // Check version compatibility
-        const version = result[EnhancedStorageManager.STORAGE_VERSION_KEY] || 0;
-        if (version > EnhancedStorageManager.CURRENT_VERSION) {
+        const version = result[StorageManager.STORAGE_VERSION_KEY] || 0;
+        if (version > StorageManager.CURRENT_VERSION) {
           this.logError('Storage data from newer version, resetting');
           this.clickData = {};
           this.isLoaded = true;
           return this.clickData;
         }
 
-        const rawData = result[EnhancedStorageManager.STORAGE_KEY];
+        const rawData = result[StorageManager.STORAGE_KEY];
         this.clickData = this.validateClickData(rawData || {});
         this.isLoaded = true;
 
@@ -99,12 +99,12 @@ export class EnhancedStorageManager implements IStorageManager {
 
         if (
           this.isRecoverableError(error) &&
-          retryCount < EnhancedStorageManager.MAX_RETRIES
+          retryCount < StorageManager.MAX_RETRIES
         ) {
           this.logError(
-            `Load attempt ${retryCount}/${EnhancedStorageManager.MAX_RETRIES} failed: ${errorInfo.type}`
+            `Load attempt ${retryCount}/${StorageManager.MAX_RETRIES} failed: ${errorInfo.type}`
           );
-          await this.delay(EnhancedStorageManager.RETRY_DELAY * retryCount);
+          await this.delay(StorageManager.RETRY_DELAY * retryCount);
           continue;
         }
 
@@ -130,12 +130,11 @@ export class EnhancedStorageManager implements IStorageManager {
     }
 
     let retryCount = 0;
-    while (retryCount < EnhancedStorageManager.MAX_RETRIES) {
+    while (retryCount < StorageManager.MAX_RETRIES) {
       try {
         const dataToSave = {
-          [EnhancedStorageManager.STORAGE_KEY]: data,
-          [EnhancedStorageManager.STORAGE_VERSION_KEY]:
-            EnhancedStorageManager.CURRENT_VERSION,
+          [StorageManager.STORAGE_KEY]: data,
+          [StorageManager.STORAGE_VERSION_KEY]: StorageManager.CURRENT_VERSION,
         };
 
         await chrome.storage.sync.set(dataToSave);
@@ -154,22 +153,20 @@ export class EnhancedStorageManager implements IStorageManager {
         // Handle rate limits
         if (errorInfo.type.includes('RATE_LIMIT')) {
           this.logError('Storage rate limit exceeded, will retry later');
-          if (retryCount < EnhancedStorageManager.MAX_RETRIES) {
-            await this.delay(
-              EnhancedStorageManager.RETRY_DELAY * retryCount * 2
-            );
+          if (retryCount < StorageManager.MAX_RETRIES) {
+            await this.delay(StorageManager.RETRY_DELAY * retryCount * 2);
             continue;
           }
         }
 
         if (
           this.isRecoverableError(error) &&
-          retryCount < EnhancedStorageManager.MAX_RETRIES
+          retryCount < StorageManager.MAX_RETRIES
         ) {
           this.logError(
-            `Save attempt ${retryCount}/${EnhancedStorageManager.MAX_RETRIES} failed: ${errorInfo.type}`
+            `Save attempt ${retryCount}/${StorageManager.MAX_RETRIES} failed: ${errorInfo.type}`
           );
-          await this.delay(EnhancedStorageManager.RETRY_DELAY * retryCount);
+          await this.delay(StorageManager.RETRY_DELAY * retryCount);
           continue;
         }
 
@@ -252,8 +249,8 @@ export class EnhancedStorageManager implements IStorageManager {
 
     try {
       await chrome.storage.sync.remove([
-        EnhancedStorageManager.STORAGE_KEY,
-        EnhancedStorageManager.STORAGE_VERSION_KEY,
+        StorageManager.STORAGE_KEY,
+        StorageManager.STORAGE_VERSION_KEY,
       ]);
       console.info('Click data cleared successfully');
     } catch (error) {
@@ -274,7 +271,7 @@ export class EnhancedStorageManager implements IStorageManager {
 
     try {
       const bytesInUse = await chrome.storage.sync.getBytesInUse(
-        EnhancedStorageManager.STORAGE_KEY
+        StorageManager.STORAGE_KEY
       );
       const quotaBytes = chrome.storage.sync.QUOTA_BYTES;
       return { bytesInUse, quotaBytes };
@@ -392,9 +389,8 @@ export class EnhancedStorageManager implements IStorageManager {
 
       this.clickData = cleanedData;
       await chrome.storage.sync.set({
-        [EnhancedStorageManager.STORAGE_KEY]: this.clickData,
-        [EnhancedStorageManager.STORAGE_VERSION_KEY]:
-          EnhancedStorageManager.CURRENT_VERSION,
+        [StorageManager.STORAGE_KEY]: this.clickData,
+        [StorageManager.STORAGE_VERSION_KEY]: StorageManager.CURRENT_VERSION,
       });
 
       console.log(
@@ -409,7 +405,7 @@ export class EnhancedStorageManager implements IStorageManager {
   private async tryLocalStorageFallback(originalError: unknown): Promise<void> {
     try {
       await chrome.storage.local.set({
-        [EnhancedStorageManager.STORAGE_KEY]: this.clickData,
+        [StorageManager.STORAGE_KEY]: this.clickData,
       });
       console.log('Saved click data to local storage as fallback');
     } catch (localError) {
