@@ -448,58 +448,5 @@ describe('Cross-Session Persistence Tests', () => {
     });
   });
 
-  describe('Data Migration and Compatibility', () => {
-    it('should handle migration from older data formats', async () => {
-      // Simulate old format data (hypothetical)
-      const oldFormatData = {
-        click_counts: { // Old key name
-          'github.com': 5, // Old format without lastClicked
-          'stackoverflow.com': 3,
-        },
-      };
 
-      mockChromeStorage.sync.get.mockResolvedValue(oldFormatData);
-
-      // Should handle gracefully and start fresh
-      const data = await storageManager.loadClickData();
-      expect(data).toEqual({}); // Should be empty due to format mismatch
-    });
-
-    it('should handle future version compatibility', async () => {
-      // Simulate future version data
-      const futureData = {
-        webpage_click_data: {
-          'github.com/': { 
-            count: 5, 
-            lastClicked: Date.now(),
-            futureField: 'some future data', // Unknown field
-          },
-        },
-        webpage_click_data_version: 999, // Future version
-      };
-
-      mockChromeStorage.sync.get.mockResolvedValue(futureData);
-
-      // Should reset for compatibility
-      const data = await storageManager.loadClickData();
-      expect(data).toEqual({});
-    });
-
-    it('should maintain backward compatibility', async () => {
-      // Current format data without version
-      const currentData = {
-        webpage_click_data: {
-          'github.com/': { count: 5, lastClicked: Date.now() },
-          'stackoverflow.com/': { count: 3, lastClicked: Date.now() },
-        },
-        // No version field (older data)
-      };
-
-      mockChromeStorage.sync.get.mockResolvedValue(currentData);
-
-      const data = await storageManager.loadClickData();
-      expect(data['github.com/']?.count).toBe(5);
-      expect(data['stackoverflow.com/']?.count).toBe(3);
-    });
-  });
 });

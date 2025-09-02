@@ -1,5 +1,9 @@
 import { IClickData } from './types';
 import { normalizeUrl } from './utils';
+import {
+  IErrorManager,
+  errorManager as defaultErrorManager,
+} from '../error-manager';
 
 export interface IStorageManager {
   loadClickData(): Promise<IClickData>;
@@ -14,8 +18,7 @@ export interface IStorageManager {
 
 export class StorageManager implements IStorageManager {
   private static readonly STORAGE_KEY = 'tidy_tabs_click_data';
-  private static readonly STORAGE_VERSION_KEY = 'tidy_tabs_click_data_version';
-  private static readonly CURRENT_VERSION = 1;
+
   private static readonly MAX_RETRIES = 3;
   private static readonly RETRY_DELAY = 1000;
 
@@ -23,8 +26,10 @@ export class StorageManager implements IStorageManager {
   private storageAvailable: boolean = true;
   private isLoaded: boolean = false;
   private testMode: boolean = false;
+  private errorManager: IErrorManager;
 
-  constructor() {
+  constructor(errorManager?: IErrorManager) {
+    this.errorManager = errorManager || defaultErrorManager;
     this.checkStorageAvailability();
   }
 
@@ -41,8 +46,12 @@ export class StorageManager implements IStorageManager {
   private checkStorageAvailability(): void {
     try {
       this.storageAvailable = !!chrome?.storage?.sync;
+      if (!this.storageAvailable) {
+        this.errorManager.addError('Chrome storage API is not available');
+      }
     } catch (error) {
       this.logError('Chrome storage not available', String(error));
+      this.errorManager.addError('Chrome storage API is not available');
       this.storageAvailable = false;
     }
   }
@@ -73,17 +82,7 @@ export class StorageManager implements IStorageManager {
       try {
         const result = await chrome.storage.sync.get([
           StorageManager.STORAGE_KEY,
-          StorageManager.STORAGE_VERSION_KEY,
         ]);
-
-        // Check version compatibility
-        const version = result[StorageManager.STORAGE_VERSION_KEY] || 0;
-        if (version > StorageManager.CURRENT_VERSION) {
-          this.logError('Storage data from newer version, resetting');
-          this.clickData = {};
-          this.isLoaded = true;
-          return this.clickData;
-        }
 
         const rawData = result[StorageManager.STORAGE_KEY];
         this.clickData = this.validateClickData(rawData || {});
@@ -134,7 +133,6 @@ export class StorageManager implements IStorageManager {
       try {
         const dataToSave = {
           [StorageManager.STORAGE_KEY]: data,
-          [StorageManager.STORAGE_VERSION_KEY]: StorageManager.CURRENT_VERSION,
         };
 
         await chrome.storage.sync.set(dataToSave);
@@ -220,6 +218,7 @@ export class StorageManager implements IStorageManager {
 
   /**
    * Get click count for a URL
+   * Provides backward compatibility during transition to visit tracking
    */
   public getClickCount(url: string): number {
     if (!this.isLoaded) {
@@ -228,6 +227,32 @@ export class StorageManager implements IStorageManager {
 
     const normalizedUrl = normalizeUrl(url);
     return this.clickData[normalizedUrl]?.count || 0;
+  }
+
+  /**
+   * Get click count with fallback support for gradual transition
+   * This method supports the gradual transition by providing click data
+   * even when the system is moving to visit tracking
+   */
+  public async getClickCountWithFallback(url: string): Promise<number> {
+    // First try to get from loaded data
+    const loadedCount = this.getClickCount(url);
+    if (loadedCount > 0) {
+      return loadedCount;
+    }
+
+    // If no loaded data and not loaded yet, try to load
+    if (!this.isLoaded) {
+      try {
+        await this.loadClickData();
+        return this.getClickCount(url);
+      } catch (error) {
+        this.logError('Failed to load click data for fallback', String(error));
+        return 0;
+      }
+    }
+
+    return 0;
   }
 
   /**
@@ -248,10 +273,7 @@ export class StorageManager implements IStorageManager {
     }
 
     try {
-      await chrome.storage.sync.remove([
-        StorageManager.STORAGE_KEY,
-        StorageManager.STORAGE_VERSION_KEY,
-      ]);
+      await chrome.storage.sync.remove([StorageManager.STORAGE_KEY]);
       console.info('Click data cleared successfully');
     } catch (error) {
       this.logError('Failed to clear click data', String(error));
@@ -390,7 +412,6 @@ export class StorageManager implements IStorageManager {
       this.clickData = cleanedData;
       await chrome.storage.sync.set({
         [StorageManager.STORAGE_KEY]: this.clickData,
-        [StorageManager.STORAGE_VERSION_KEY]: StorageManager.CURRENT_VERSION,
       });
 
       console.log(

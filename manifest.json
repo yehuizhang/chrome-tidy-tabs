@@ -25,5 +25,8 @@
     "16": "assets/tidy-tab-16.png",
     "48": "assets/tidy-tab-48.png",
     "128": "assets/tidy-tab-128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
   }
 } 

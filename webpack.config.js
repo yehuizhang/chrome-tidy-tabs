@@ -6,7 +6,8 @@ module.exports = (env, argv) => {
 
   return {
     entry: {
-      popup: './src/popup.ts'
+      popup: './src/popup.ts',
+      background: './src/background.ts'
     },
     output: {
       path: path.resolve(__dirname, 'dist'),

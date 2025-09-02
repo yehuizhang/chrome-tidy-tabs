@@ -1,83 +1,86 @@
 import {
-  ISearchResult,
-  IEnhancedSearchResult,
-  IClickData,
   IScoringWeights,
+  IVisitData,
+  IUnifiedSearchResult,
+  IBookmarkTreeNode,
+  IVisitSearchResult,
 } from './types';
 import { normalizeUrl } from './utils';
 
 export class SearchScorer {
   private readonly weights: IScoringWeights = {
     fuzzySearchWeight: 0.7,
-    clickCountWeight: 0.3,
-    maxClickBoost: 2.0, // Increased to give more boost to frequently clicked items
+    clickCountWeight: 0.3, // Now represents visit count weight
+    maxClickBoost: 2.0, // Now represents max visit boost
   };
 
   /**
-   * Enhance search results by combining fuzzy search scores with click count data
+   * Enhance unified search results by combining fuzzy search scores with visit frequency data
    */
-  enhanceSearchResults(
-    searchResults: ISearchResult[],
-    clickData: IClickData
-  ): IEnhancedSearchResult[] {
-    if (searchResults.length === 0) {
+  enhanceUnifiedSearchResults(
+    unifiedResults: IUnifiedSearchResult[],
+    visitData: IVisitData
+  ): IUnifiedSearchResult[] {
+    if (unifiedResults.length === 0) {
       return [];
     }
 
     try {
-      // Validate click data
-      const validatedClickData = this.validateClickData(clickData);
+      // Validate visit data
+      const validatedVisitData = this.validateVisitData(visitData);
 
-      // Get max click count for normalization
-      const maxClickCount = this.getMaxClickCount(validatedClickData);
+      // Get max visit count for normalization
+      const maxVisitCount = this.getMaxVisitCount(validatedVisitData);
 
-      // Enhance each result with click data and final score
-      const enhancedResults = searchResults.map(result => {
+      // Enhance each result with visit data and final score
+      const enhancedResults = unifiedResults.map(result => {
         try {
-          const clickCount = this.getClickCountForBookmark(
+          const visitCount = this.getVisitCountForResult(
             result,
-            validatedClickData
+            validatedVisitData
           );
-          const normalizedClickScore = this.normalizeClickCount(
-            clickCount,
-            maxClickCount
+          const normalizedVisitScore = this.normalizeVisitCount(
+            visitCount,
+            maxVisitCount
           );
           const finalScore = this.calculateFinalScore(
             result.score || 1,
-            normalizedClickScore
+            normalizedVisitScore
           );
 
           return {
             ...result,
-            clickCount,
+            visitCount,
             finalScore,
-          } as IEnhancedSearchResult;
+          };
         } catch {
           // If individual result processing fails, fall back to fuzzy score only
           console.debug(
-            'Failed to enhance individual search result, using fuzzy score only'
+            'Failed to enhance individual unified search result, using fuzzy score only'
           );
           return {
             ...result,
-            clickCount: 0,
+            visitCount: result.visitCount || 0,
             finalScore: result.score || 1,
-          } as IEnhancedSearchResult;
+          };
         }
       });
 
       // Sort by final score (lower is better, like Fuse.js)
-      return enhancedResults.sort((a, b) => a.finalScore - b.finalScore);
+      return enhancedResults.sort(
+        (a, b) => (a.finalScore || 1) - (b.finalScore || 1)
+      );
     } catch (error) {
       // If enhancement fails completely, fall back to original results
       console.warn(
-        'Search enhancement failed, falling back to fuzzy search only:',
+        'Unified search enhancement failed, falling back to fuzzy search only:',
         error
       );
-      return searchResults.map(result => ({
+      return unifiedResults.map(result => ({
         ...result,
-        clickCount: 0,
+        visitCount: result.visitCount || 0,
         finalScore: result.score || 1,
-      })) as IEnhancedSearchResult[];
+      }));
     }
   }
 
@@ -99,42 +102,6 @@ export class SearchScorer {
   }
 
   /**
-   * Normalize click count to 0-1 range based on maximum observed clicks
-   */
-  private normalizeClickCount(
-    clickCount: number,
-    maxClickCount: number
-  ): number {
-    if (maxClickCount === 0) {
-      return 0;
-    }
-    return Math.min(clickCount / maxClickCount, 1.0);
-  }
-
-  /**
-   * Get click count for a specific bookmark
-   */
-  private getClickCountForBookmark(
-    searchResult: ISearchResult,
-    clickData: IClickData
-  ): number {
-    if (!searchResult.item.url) {
-      return 0;
-    }
-
-    const normalizedUrl = normalizeUrl(searchResult.item.url);
-    return clickData[normalizedUrl]?.count || 0;
-  }
-
-  /**
-   * Find the maximum click count across all stored data
-   */
-  private getMaxClickCount(clickData: IClickData): number {
-    const clickCounts = Object.values(clickData).map(data => data.count);
-    return clickCounts.length > 0 ? Math.max(...clickCounts) : 0;
-  }
-
-  /**
    * Get current scoring weights (for testing and configuration)
    */
   getWeights(): IScoringWeights {
@@ -149,49 +116,95 @@ export class SearchScorer {
   }
 
   /**
-   * Validate click data structure and handle corrupted data
+   * Get visit count for a unified search result
    */
-  private validateClickData(clickData: IClickData): IClickData {
-    if (!clickData || typeof clickData !== 'object') {
-      console.debug('Invalid click data structure, using empty data');
+  private getVisitCountForResult(
+    result: IUnifiedSearchResult,
+    visitData: IVisitData
+  ): number {
+    let url: string | undefined;
+
+    if (result.type === 'bookmark') {
+      const bookmark = result.item as IBookmarkTreeNode;
+      url = bookmark.url;
+    } else if (result.type === 'visit') {
+      const visitResult = result.item as IVisitSearchResult;
+      url = visitResult.url;
+    }
+
+    if (!url) {
+      return result.visitCount || 0;
+    }
+
+    const normalizedUrl = normalizeUrl(url);
+    return visitData[normalizedUrl]?.count || result.visitCount || 0;
+  }
+
+  /**
+   * Normalize visit count to 0-1 range based on maximum observed visits
+   */
+  private normalizeVisitCount(
+    visitCount: number,
+    maxVisitCount: number
+  ): number {
+    if (maxVisitCount === 0) {
+      return 0;
+    }
+    return Math.min(visitCount / maxVisitCount, 1.0);
+  }
+
+  /**
+   * Find the maximum visit count across all stored data
+   */
+  private getMaxVisitCount(visitData: IVisitData): number {
+    const visitCounts = Object.values(visitData).map(data => data.count);
+    return visitCounts.length > 0 ? Math.max(...visitCounts) : 0;
+  }
+
+  /**
+   * Validate visit data structure and handle corrupted data
+   */
+  private validateVisitData(visitData: IVisitData): IVisitData {
+    if (!visitData || typeof visitData !== 'object') {
+      console.debug('Invalid visit data structure, using empty data');
       return {};
     }
 
-    const validatedData: IClickData = {};
+    const validatedData: IVisitData = {};
     let invalidEntries = 0;
 
-    for (const [url, clickInfo] of Object.entries(clickData)) {
-      if (this.isValidClickEntry(url, clickInfo)) {
-        validatedData[url] = clickInfo;
+    for (const [url, visitInfo] of Object.entries(visitData)) {
+      if (this.isValidVisitEntry(url, visitInfo)) {
+        validatedData[url] = visitInfo;
       } else {
         invalidEntries++;
       }
     }
 
     if (invalidEntries > 0) {
-      console.debug(`Removed ${invalidEntries} invalid click data entries`);
+      console.debug(`Removed ${invalidEntries} invalid visit data entries`);
     }
 
     return validatedData;
   }
 
   /**
-   * Validate individual click data entry
+   * Validate individual visit data entry
    */
-  private isValidClickEntry(url: string, clickInfo: unknown): boolean {
+  private isValidVisitEntry(url: string, visitInfo: unknown): boolean {
     return (
       typeof url === 'string' &&
       url.length > 0 &&
-      clickInfo !== null &&
-      typeof clickInfo === 'object' &&
-      'count' in clickInfo &&
-      'lastClicked' in clickInfo &&
-      typeof (clickInfo as { count: unknown }).count === 'number' &&
-      typeof (clickInfo as { lastClicked: unknown }).lastClicked === 'number' &&
-      (clickInfo as { count: number }).count >= 0 &&
-      (clickInfo as { lastClicked: number }).lastClicked > 0 &&
-      Number.isFinite((clickInfo as { count: number }).count) &&
-      Number.isFinite((clickInfo as { lastClicked: number }).lastClicked)
+      visitInfo !== null &&
+      typeof visitInfo === 'object' &&
+      'count' in visitInfo &&
+      'lastVisited' in visitInfo &&
+      typeof (visitInfo as { count: unknown }).count === 'number' &&
+      typeof (visitInfo as { lastVisited: unknown }).lastVisited === 'number' &&
+      (visitInfo as { count: number }).count >= 0 &&
+      (visitInfo as { lastVisited: number }).lastVisited > 0 &&
+      Number.isFinite((visitInfo as { count: number }).count) &&
+      Number.isFinite((visitInfo as { lastVisited: number }).lastVisited)
     );
   }
 }

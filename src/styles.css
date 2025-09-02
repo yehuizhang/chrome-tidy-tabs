@@ -273,3 +273,48 @@ h1 {
   border-radius: 10px;
   background: FFFFFF_1;
 }
+/* Error display styles */
+.error-container {
+  background: linear-gradient(135deg, #fef7f0 0%, #fdf2e9 100%);
+  border: 1px solid #f56565;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(245, 101, 101, 0.1);
+  display: none;
+}
+
+.error-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.error-title {
+  font-weight: 600;
+  color: #c53030;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.error-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.error-item {
+  background: rgba(245, 101, 101, 0.1);
+  border-left: 3px solid #f56565;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #742a2a;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.error-item:last-child {
+  margin-bottom: 0;
+}
