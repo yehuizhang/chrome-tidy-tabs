@@ -42,3 +42,36 @@ export interface IUnifiedSearchResult {
   visitCount?: number;
   finalScore?: number; // Combined relevance + visit frequency
 }
+
+// Progress tracking interfaces for history initialization
+export interface IHistoryInitializationProgress {
+  phase:
+    | 'checking'
+    | 'requesting_permission'
+    | 'reading_history'
+    | 'processing'
+    | 'saving'
+    | 'complete'
+    | 'error';
+  totalItems?: number;
+  processedItems?: number;
+  currentBatch?: number;
+  totalBatches?: number;
+  message?: string;
+  error?: string;
+  startTime?: number;
+  estimatedTimeRemaining?: number;
+}
+
+export interface IProgressCallback {
+  (progress: IHistoryInitializationProgress): void;
+}
+
+export interface IHistoryInitializationResult {
+  success: boolean;
+  itemsProcessed?: number;
+  uniqueUrls?: number;
+  error?: string;
+  skippedItems?: number;
+  processingTimeMs?: number;
+}

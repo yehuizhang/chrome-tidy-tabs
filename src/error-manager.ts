@@ -7,6 +7,8 @@ import { escapeHtml } from './searching/utils';
 
 export interface IErrorManager {
   addError(message: string): void;
+  addHistoryInitializationError(message: string, phase?: string): void;
+  addPermissionError(message: string): void;
   getErrors(): string[];
   clearErrors(): void;
   displayErrors(): void;
@@ -31,6 +33,38 @@ export class ErrorManager implements IErrorManager {
     }
 
     this.errors.push(message.trim());
+    this.saveErrorsToStorage();
+  }
+
+  /**
+   * Add a history initialization specific error with context
+   * @param message - Error message to add
+   * @param phase - Optional phase where the error occurred
+   */
+  addHistoryInitializationError(message: string, phase?: string): void {
+    if (!message || message.trim().length === 0) {
+      return;
+    }
+
+    const contextualMessage = phase 
+      ? `History Initialization (${phase}): ${message.trim()}`
+      : `History Initialization: ${message.trim()}`;
+    
+    this.errors.push(contextualMessage);
+    this.saveErrorsToStorage();
+  }
+
+  /**
+   * Add a permission-related error with specific formatting
+   * @param message - Permission error message to add
+   */
+  addPermissionError(message: string): void {
+    if (!message || message.trim().length === 0) {
+      return;
+    }
+
+    const permissionMessage = `Permission Error: ${message.trim()}`;
+    this.errors.push(permissionMessage);
     this.saveErrorsToStorage();
   }
 

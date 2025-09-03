@@ -1,6 +1,6 @@
 import { SearchScorer } from '../src/searching/search-scorer';
-import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
-import { IBookmarkTreeNode, ISearchResult, IClickData } from '../src/searching/types';
+import { StorageManager } from '../src/searching/storage-manager';
+import { IBookmarkTreeNode, IUnifiedSearchResult, IClickData, IVisitData } from '../src/searching/types';
 
 // Mock Chrome APIs
 const mockChromeStorage = {
@@ -19,128 +19,130 @@ const mockChromeStorage = {
 
 describe('Search Integration Tests', () => {
   let searchScorer: SearchScorer;
-  let storageManager: EnhancedStorageManager;
+  let storageManager: StorageManager;
 
   const mockBookmarks: IBookmarkTreeNode[] = [
-    { id: '1', title: 'GitHub', url: 'https://github.com' },
-    { id: '2', title: 'Stack Overflow', url: 'https://stackoverflow.com' },
-    { id: '3', title: 'MDN Web Docs', url: 'https://developer.mozilla.org' },
-    { id: '4', title: 'TypeScript Handbook', url: 'https://www.typescriptlang.org/docs' },
+    { id: '1', title: 'GitHub', url: 'https://github.com', syncing: false },
+    { id: '2', title: 'Stack Overflow', url: 'https://stackoverflow.com', syncing: false },
+    { id: '3', title: 'MDN Web Docs', url: 'https://developer.mozilla.org', syncing: false },
+    { id: '4', title: 'TypeScript Handbook', url: 'https://www.typescriptlang.org/docs', syncing: false },
   ];
 
   beforeEach(() => {
     searchScorer = new SearchScorer();
-    storageManager = new EnhancedStorageManager();
+    storageManager = new StorageManager();
     storageManager.enableTestMode();
     jest.clearAllMocks();
   });
 
-  describe('Complete Search Flow with Click Data', () => {
-    it('should rank frequently clicked bookmarks higher in search results', async () => {
-      // Setup click data - GitHub has been clicked 10 times, others have no clicks
+  describe('Complete Search Flow with Visit Data', () => {
+    it('should rank frequently visited bookmarks higher in search results', async () => {
+      // Setup visit data - GitHub has been visited 10 times, others have fewer visits
       // URLs are normalized to hostname + pathname
-      const clickData: IClickData = {
-        'github.com/': { count: 10, lastClicked: Date.now() },
-        'stackoverflow.com/': { count: 2, lastClicked: Date.now() - 1000 },
+      const visitData: IVisitData = {
+        'github.com/': { count: 10, lastVisited: Date.now() },
+        'stackoverflow.com/': { count: 2, lastVisited: Date.now() - 1000 },
       };
 
-      mockChromeStorage.sync.get.mockResolvedValue({
-        webpage_click_data: clickData,
-      });
-
-      await storageManager.loadClickData();
-
-      // Simulate fuzzy search results (all have similar scores)
-      const searchResults: ISearchResult[] = [
-        { item: mockBookmarks[0]!, score: 0.3 }, // GitHub
-        { item: mockBookmarks[1]!, score: 0.35 }, // Stack Overflow  
-        { item: mockBookmarks[2]!, score: 0.4 }, // MDN
-        { item: mockBookmarks[3]!, score: 0.45 }, // TypeScript
+      // Simulate unified search results (all have similar scores)
+      const searchResults: IUnifiedSearchResult[] = [
+        { item: mockBookmarks[0]!, score: 0.3, type: 'bookmark' }, // GitHub
+        { item: mockBookmarks[1]!, score: 0.35, type: 'bookmark' }, // Stack Overflow  
+        { item: mockBookmarks[2]!, score: 0.4, type: 'bookmark' }, // MDN
+        { item: mockBookmarks[3]!, score: 0.45, type: 'bookmark' }, // TypeScript
       ];
 
-      const enhancedResults = searchScorer.enhanceSearchResults(
+      const enhancedResults = searchScorer.enhanceUnifiedSearchResults(
         searchResults,
-        clickData
+        visitData
       );
 
-      // GitHub should be ranked first due to high click count
+      // GitHub should be ranked first due to high visit count
       expect(enhancedResults[0]!.item.title).toBe('GitHub');
-      expect(enhancedResults[0]!.clickCount).toBe(10);
+      expect(enhancedResults[0]!.visitCount).toBe(10);
       expect(enhancedResults[0]!.finalScore).toBeLessThan(searchResults[0]!.score!);
 
-      // Stack Overflow should be second due to some clicks
+      // Stack Overflow should be second due to some visits
       expect(enhancedResults[1]!.item.title).toBe('Stack Overflow');
-      expect(enhancedResults[1]!.clickCount).toBe(2);
+      expect(enhancedResults[1]!.visitCount).toBe(2);
 
-      // Items with no clicks should maintain fuzzy search order
+      // Items with no visits should maintain fuzzy search order
       expect(enhancedResults[2]!.item.title).toBe('MDN Web Docs');
       expect(enhancedResults[3]!.item.title).toBe('TypeScript Handbook');
     });
 
-    it('should handle search when no click data exists', async () => {
-      mockChromeStorage.sync.get.mockResolvedValue({});
-      await storageManager.loadClickData();
-
-      const searchResults: ISearchResult[] = [
-        { item: mockBookmarks[0]!, score: 0.3 },
-        { item: mockBookmarks[1]!, score: 0.4 },
+    it('should handle search when no visit data exists', async () => {
+      const searchResults: IUnifiedSearchResult[] = [
+        { item: mockBookmarks[0]!, score: 0.3, type: 'bookmark' },
+        { item: mockBookmarks[1]!, score: 0.4, type: 'bookmark' },
       ];
 
-      const enhancedResults = searchScorer.enhanceSearchResults(
+      const enhancedResults = searchScorer.enhanceUnifiedSearchResults(
         searchResults,
         {}
       );
 
-      // Should maintain original fuzzy search order when no click data
+      // Should maintain original fuzzy search order when no visit data
       expect(enhancedResults[0]!.item.title).toBe('GitHub');
       expect(enhancedResults[1]!.item.title).toBe('Stack Overflow');
-      expect(enhancedResults[0]!.clickCount).toBe(0);
-      expect(enhancedResults[1]!.clickCount).toBe(0);
+      expect(enhancedResults[0]!.visitCount).toBe(0);
+      expect(enhancedResults[1]!.visitCount).toBe(0);
     });
 
     it('should gracefully handle storage errors and continue with fuzzy search', async () => {
       mockChromeStorage.sync.get.mockRejectedValue(new Error('Storage error'));
       await storageManager.loadClickData();
 
-      const searchResults: ISearchResult[] = [
-        { item: mockBookmarks[0]!, score: 0.3 },
-        { item: mockBookmarks[1]!, score: 0.4 },
+      const searchResults: IUnifiedSearchResult[] = [
+        { item: mockBookmarks[0]!, score: 0.3, type: 'bookmark' },
+        { item: mockBookmarks[1]!, score: 0.4, type: 'bookmark' },
       ];
 
-      const enhancedResults = searchScorer.enhanceSearchResults(
+      // Convert click data to visit data format for the test
+      const clickData = storageManager.getAllClickData();
+      const visitData: IVisitData = {};
+      Object.entries(clickData).forEach(([url, data]) => {
+        visitData[url] = {
+          count: data.count,
+          lastVisited: data.lastClicked,
+        };
+      });
+
+      const enhancedResults = searchScorer.enhanceUnifiedSearchResults(
         searchResults,
-        storageManager.getAllClickData()
+        visitData
       );
 
-      // Should work with empty click data when storage fails
+      // Should work with empty visit data when storage fails
       expect(enhancedResults).toHaveLength(2);
-      expect(enhancedResults[0]!.clickCount).toBe(0);
-      expect(enhancedResults[1]!.clickCount).toBe(0);
+      expect(enhancedResults[0]!.visitCount).toBe(0);
+      expect(enhancedResults[1]!.visitCount).toBe(0);
     });
 
     it('should maintain search performance with large datasets', async () => {
-      // Create large click data set
-      const largeClickData: IClickData = {};
+      // Create large visit data set
+      const largeVisitData: IVisitData = {};
       for (let i = 0; i < 1000; i++) {
-        largeClickData[`example${i}.com/`] = {
+        largeVisitData[`example${i}.com/`] = {
           count: Math.floor(Math.random() * 100),
-          lastClicked: Date.now(),
+          lastVisited: Date.now(),
         };
       }
 
       // Create large search results
-      const largeSearchResults: ISearchResult[] = [];
+      const largeSearchResults: IUnifiedSearchResult[] = [];
       for (let i = 0; i < 100; i++) {
         largeSearchResults.push({
-          item: { id: `${i}`, title: `Bookmark ${i}`, url: `https://example${i}.com/` },
+          item: { id: `${i}`, title: `Bookmark ${i}`, url: `https://example${i}.com/`, syncing: false },
           score: Math.random(),
+          type: 'bookmark',
         });
       }
 
       const startTime = performance.now();
-      const enhancedResults = searchScorer.enhanceSearchResults(
+      const enhancedResults = searchScorer.enhanceUnifiedSearchResults(
         largeSearchResults,
-        largeClickData
+        largeVisitData
       );
       const endTime = performance.now();
 
@@ -157,15 +159,28 @@ describe('Search Integration Tests', () => {
       await storageManager.loadClickData();
 
       // Initial search results
-      const searchResults: ISearchResult[] = [
-        { item: mockBookmarks[0]!, score: 0.4 }, // GitHub (worse fuzzy score)
-        { item: mockBookmarks[1]!, score: 0.3 }, // Stack Overflow (better fuzzy score)
+      const searchResults: IUnifiedSearchResult[] = [
+        { item: mockBookmarks[0]!, score: 0.4, type: 'bookmark' }, // GitHub (worse fuzzy score)
+        { item: mockBookmarks[1]!, score: 0.3, type: 'bookmark' }, // Stack Overflow (better fuzzy score)
       ];
 
+      // Convert click data to visit data format
+      const convertClickToVisitData = (clickData: IClickData): IVisitData => {
+        const visitData: IVisitData = {};
+        Object.entries(clickData).forEach(([url, data]) => {
+          visitData[url] = {
+            count: data.count,
+            lastVisited: data.lastClicked,
+          };
+        });
+        return visitData;
+      };
+
       // Initially, Stack Overflow should rank higher due to better fuzzy score
-      let enhancedResults = searchScorer.enhanceSearchResults(
+      let visitData = convertClickToVisitData(storageManager.getAllClickData());
+      let enhancedResults = searchScorer.enhanceUnifiedSearchResults(
         searchResults,
-        storageManager.getAllClickData()
+        visitData
       );
       expect(enhancedResults[0]!.item.title).toBe('Stack Overflow');
 
@@ -175,34 +190,32 @@ describe('Search Integration Tests', () => {
       await storageManager.recordClick('https://github.com');
 
       // Now GitHub should rank higher due to click history
-      enhancedResults = searchScorer.enhanceSearchResults(
+      visitData = convertClickToVisitData(storageManager.getAllClickData());
+      enhancedResults = searchScorer.enhanceUnifiedSearchResults(
         searchResults,
-        storageManager.getAllClickData()
+        visitData
       );
       expect(enhancedResults[0]!.item.title).toBe('GitHub');
-      expect(enhancedResults[0]!.clickCount).toBe(3);
+      expect(enhancedResults[0]!.visitCount).toBe(3);
     });
 
     it('should handle edge cases in search results', async () => {
-      mockChromeStorage.sync.get.mockResolvedValue({});
-      await storageManager.loadClickData();
-
       // Test with empty search results
-      let enhancedResults = searchScorer.enhanceSearchResults([], {});
+      let enhancedResults = searchScorer.enhanceUnifiedSearchResults([], {});
       expect(enhancedResults).toHaveLength(0);
 
       // Test with results missing URLs
-      const resultsWithoutUrls: ISearchResult[] = [
-        { item: { id: '1', title: 'Folder' }, score: 0.3 },
+      const resultsWithoutUrls: IUnifiedSearchResult[] = [
+        { item: { id: '1', title: 'Folder', syncing: false }, score: 0.3, type: 'bookmark' },
       ];
-      enhancedResults = searchScorer.enhanceSearchResults(resultsWithoutUrls, {});
-      expect(enhancedResults[0]!.clickCount).toBe(0);
+      enhancedResults = searchScorer.enhanceUnifiedSearchResults(resultsWithoutUrls, {});
+      expect(enhancedResults[0]!.visitCount).toBe(0);
 
       // Test with results missing scores
-      const resultsWithoutScores: ISearchResult[] = [
-        { item: mockBookmarks[0]! },
+      const resultsWithoutScores: IUnifiedSearchResult[] = [
+        { item: mockBookmarks[0]!, type: 'bookmark', score: 1 },
       ];
-      enhancedResults = searchScorer.enhanceSearchResults(resultsWithoutScores, {});
+      enhancedResults = searchScorer.enhanceUnifiedSearchResults(resultsWithoutScores, {});
       expect(enhancedResults[0]!.finalScore).toBeDefined();
     });
   });
@@ -214,7 +227,7 @@ describe('Search Integration Tests', () => {
       };
 
       mockChromeStorage.sync.get.mockResolvedValue({
-        webpage_click_data: persistedClickData,
+        tidy_tabs_click_data: persistedClickData,
       });
 
       await storageManager.loadClickData();
@@ -233,14 +246,15 @@ describe('Search Integration Tests', () => {
 
   describe('Performance Optimization', () => {
     it('should not significantly impact search performance', async () => {
-      const clickData: IClickData = {
-        'github.com/': { count: 10, lastClicked: Date.now() },
-        'stackoverflow.com/': { count: 5, lastClicked: Date.now() },
+      const visitData: IVisitData = {
+        'github.com/': { count: 10, lastVisited: Date.now() },
+        'stackoverflow.com/': { count: 5, lastVisited: Date.now() },
       };
 
-      const searchResults: ISearchResult[] = mockBookmarks.map((bookmark, index) => ({
+      const searchResults: IUnifiedSearchResult[] = mockBookmarks.map((bookmark, index) => ({
         item: bookmark,
         score: 0.3 + (index * 0.1),
+        type: 'bookmark' as const,
       }));
 
       // Measure performance of enhanced scoring
@@ -248,7 +262,7 @@ describe('Search Integration Tests', () => {
       const startTime = performance.now();
 
       for (let i = 0; i < iterations; i++) {
-        searchScorer.enhanceSearchResults(searchResults, clickData);
+        searchScorer.enhanceUnifiedSearchResults(searchResults, visitData);
       }
 
       const endTime = performance.now();
