@@ -3,7 +3,7 @@
   "name": "Tidy Tabs",
   "version": "1.0.3",
   "description": "A Chrome extension to sort your tabs, remove duplicates, and merge windows",
-  "permissions": ["tabs", "activeTab", "bookmarks", "storage"],
+  "permissions": ["tabs", "activeTab", "bookmarks", "storage", "favicon"],
   "commands": {
     "_execute_action": {
       "suggested_key": {
