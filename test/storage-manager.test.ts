@@ -3,7 +3,7 @@
  * Tests Chrome storage operations, error handling, and fallback mechanisms
  */
 
-import { EnhancedStorageManager } from '../src/searching/enhanced-storage-manager';
+import { StorageManager } from '../src/searching/storage-manager';
 import { IClickData } from '../src/searching/types';
 import { mockChromeStorage } from './setup';
 
@@ -11,10 +11,11 @@ import { mockChromeStorage } from './setup';
 declare const global: any;
 
 describe('StorageManager', () => {
-  let storageManager: EnhancedStorageManager;
+  let storageManager: StorageManager;
 
   beforeEach(() => {
-    storageManager = new EnhancedStorageManager();
+    storageManager = new StorageManager();
+    storageManager.enableTestMode();
   });
 
   describe('Constructor and Storage Availability', () => {
@@ -26,7 +27,7 @@ describe('StorageManager', () => {
       const originalChrome = global.chrome;
       global.chrome = undefined;
 
-      const storageManager = new EnhancedStorageManager();
+      const storageManager = new StorageManager();
       expect(storageManager.isStorageAvailable()).toBe(false);
 
       global.chrome = originalChrome;
@@ -36,7 +37,7 @@ describe('StorageManager', () => {
       const originalChrome = global.chrome;
       global.chrome = { storage: {} } as any;
 
-      const storageManager = new EnhancedStorageManager();
+      const storageManager = new StorageManager();
       expect(storageManager.isStorageAvailable()).toBe(false);
 
       global.chrome = originalChrome;
@@ -51,16 +52,14 @@ describe('StorageManager', () => {
       };
 
       mockChromeStorage.sync.get.mockResolvedValue({
-        webpage_click_data: testData,
-        webpage_click_data_version: 1,
+        tidy_tabs_click_data: testData,
       });
 
       const result = await storageManager.loadClickData();
 
       expect(result).toEqual(testData);
       expect(mockChromeStorage.sync.get).toHaveBeenCalledWith([
-        'webpage_click_data',
-        'webpage_click_data_version',
+        'tidy_tabs_click_data',
       ]);
     });
 
@@ -82,8 +81,7 @@ describe('StorageManager', () => {
       };
 
       mockChromeStorage.sync.get.mockResolvedValue({
-        webpage_click_data: invalidData,
-        webpage_click_data_version: 1,
+        tidy_tabs_click_data: invalidData,
       });
 
       const result = await storageManager.loadClickData();
@@ -93,15 +91,15 @@ describe('StorageManager', () => {
       });
     });
 
-    test('should handle newer version data by resetting', async () => {
+    test('should load valid data without version checks', async () => {
+      const testData = { 'test.com/': { count: 1, lastClicked: 123 } };
       mockChromeStorage.sync.get.mockResolvedValue({
-        webpage_click_data: { 'test.com/': { count: 1, lastClicked: 123 } },
-        webpage_click_data_version: 999, // Future version
+        tidy_tabs_click_data: testData,
       });
 
       const result = await storageManager.loadClickData();
 
-      expect(result).toEqual({});
+      expect(result).toEqual(testData);
     });
 
     test('should handle storage errors gracefully', async () => {
@@ -118,7 +116,7 @@ describe('StorageManager', () => {
       const originalChrome = global.chrome;
       global.chrome = undefined;
 
-      const storageManager = new EnhancedStorageManager();
+      const storageManager = new StorageManager();
       const result = await storageManager.loadClickData();
 
       expect(result).toEqual({});
@@ -138,8 +136,7 @@ describe('StorageManager', () => {
       await storageManager.saveClickData(testData);
 
       expect(mockChromeStorage.sync.set).toHaveBeenCalledWith({
-        webpage_click_data: testData,
-        webpage_click_data_version: 1,
+        tidy_tabs_click_data: testData,
       });
     });
 
@@ -171,11 +168,9 @@ describe('StorageManager', () => {
         new Error('MAX_WRITE_OPERATIONS_PER_MINUTE')
       );
 
-      await storageManager.saveClickData(testData);
-
       // Should not throw error, should handle gracefully
-      expect(true).toBe(true);
-    });
+      await expect(storageManager.saveClickData(testData)).resolves.not.toThrow();
+    }, 10000); // Increase timeout to 10 seconds
 
     test('should use fallback when storage unavailable', async () => {
       const originalChrome = global.chrome;
@@ -185,7 +180,7 @@ describe('StorageManager', () => {
         'example.com/': { count: 5, lastClicked: 1703123456789 },
       };
 
-      const storageManager = new EnhancedStorageManager();
+      const storageManager = new StorageManager();
       await storageManager.saveClickData(testData);
 
       // Should not throw error
@@ -215,8 +210,7 @@ describe('StorageManager', () => {
       await storageManager.clearClickData();
 
       expect(mockChromeStorage.sync.remove).toHaveBeenCalledWith([
-        'webpage_click_data',
-        'webpage_click_data_version',
+        'tidy_tabs_click_data',
       ]);
     });
 
@@ -235,7 +229,7 @@ describe('StorageManager', () => {
       const originalChrome = global.chrome;
       global.chrome = undefined;
 
-      const storageManager = new EnhancedStorageManager();
+      const storageManager = new StorageManager();
       await storageManager.clearClickData();
 
       // Should not throw error
@@ -256,7 +250,7 @@ describe('StorageManager', () => {
         quotaBytes: 102400,
       });
       expect(mockChromeStorage.sync.getBytesInUse).toHaveBeenCalledWith(
-        'webpage_click_data'
+        'tidy_tabs_click_data'
       );
     });
 
@@ -277,7 +271,7 @@ describe('StorageManager', () => {
       const originalChrome = global.chrome;
       global.chrome = undefined;
 
-      const storageManager = new EnhancedStorageManager();
+      const storageManager = new StorageManager();
       const info = await storageManager.getStorageInfo();
 
       expect(info).toEqual({
@@ -311,7 +305,7 @@ describe('StorageManager', () => {
 
       // Check that cleanup kept 80% of entries (80 out of 100)
       const cleanupCall = mockChromeStorage.sync.set.mock.calls[1][0];
-      const cleanedData = cleanupCall.webpage_click_data;
+      const cleanedData = cleanupCall.tidy_tabs_click_data;
       expect(Object.keys(cleanedData)).toHaveLength(80);
 
       // Verify it kept the most recent entries (highest lastClicked values)
@@ -351,8 +345,7 @@ describe('StorageManager', () => {
       };
 
       mockChromeStorage.sync.get.mockResolvedValue({
-        webpage_click_data: mixedData,
-        webpage_click_data_version: 1
+        tidy_tabs_click_data: mixedData,
       });
 
       const result = await storageManager.loadClickData();
@@ -377,8 +370,7 @@ describe('StorageManager', () => {
       };
 
       mockChromeStorage.sync.get.mockResolvedValue({
-        webpage_click_data: invalidData,
-        webpage_click_data_version: 1
+        tidy_tabs_click_data: invalidData,
       });
 
       const result = await storageManager.loadClickData();

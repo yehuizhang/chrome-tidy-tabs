@@ -13,6 +13,8 @@ const mockChromeStorage = {
 // Mock error manager
 const mockErrorManager: IErrorManager = {
   addError: jest.fn(),
+  addHistoryInitializationError: jest.fn(),
+  addPermissionError: jest.fn(),
   getErrors: jest.fn(() => []),
   clearErrors: jest.fn(),
   displayErrors: jest.fn(),
@@ -183,7 +185,7 @@ describe('InitializationStateManager', () => {
 
       expect(mockErrorManager.addError).toHaveBeenCalledWith('Chrome storage API is not available - initialization state not saved');
 
-      (global as unknown).chrome = originalChrome;
+      (global as any).chrome = originalChrome;
     });
   });
 

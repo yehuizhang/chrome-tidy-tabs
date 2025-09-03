@@ -125,6 +125,75 @@ When unit tests fail, follow this systematic approach to identify root causes be
 - **Ensure fix doesn't break other tests** by running full test suite
 - **Add additional test cases** if the failure revealed missing coverage
 
+### API Evolution Test Debugging Patterns
+
+When tests fail due to API changes or refactoring, follow these specific patterns learned from real debugging sessions:
+
+#### 1. Import and Interface Mismatches
+
+**Common Issue**: Tests import old interfaces or classes that have been renamed/refactored
+- **Pattern**: Look for `Cannot find module` or `does not exist on type` errors
+- **Solution**: Update imports to match current API (e.g., `EnhancedStorageManager` → `StorageManager`)
+- **Check**: Verify the actual class/interface names in the source files
+
+#### 2. Method Signature Changes
+
+**Common Issue**: Tests call methods that have been renamed or have different signatures
+- **Pattern**: `Property 'methodName' does not exist on type` errors
+- **Solution**: Update method calls to match current API (e.g., `enhanceSearchResults` → `enhanceUnifiedSearchResults`)
+- **Check**: Read the actual implementation to understand the new method signatures
+
+#### 3. Data Structure Evolution
+
+**Common Issue**: Tests use old data structures that have been replaced
+- **Pattern**: Type mismatches between test data and expected interfaces
+- **Solution**: Update test data to match new interfaces (e.g., `IClickData` → `IVisitData`, `lastClicked` → `lastVisited`)
+- **Check**: Compare old and new type definitions to understand the mapping
+
+#### 4. Chrome API Type Requirements
+
+**Common Issue**: Mock objects missing required properties from Chrome types
+- **Pattern**: `Property 'syncing' is missing in type` errors for BookmarkTreeNode
+- **Solution**: Add all required properties to mock objects (e.g., `syncing: false`)
+- **Check**: Look at the Chrome types definition to see all required properties
+
+#### 5. Union Type Property Access
+
+**Common Issue**: Accessing properties on union types without proper type guards
+- **Pattern**: `Property 'id' does not exist on type 'A | B'` errors
+- **Solution**: Use type assertions `(item as any).id` or proper type guards
+- **Check**: Understand which properties exist on all union members vs. specific ones
+
+#### 6. Storage Key Changes
+
+**Common Issue**: Tests use old storage keys that don't match implementation
+- **Pattern**: Tests pass but data isn't loaded correctly
+- **Solution**: Update mock storage keys to match current implementation (e.g., `webpage_click_data` → `tidy_tabs_click_data`)
+- **Check**: Look at the actual storage manager constants
+
+#### 7. Test Adaptation Strategy
+
+When adapting tests to evolved APIs:
+1. **Start with compilation errors** - fix imports and type issues first
+2. **Update method calls** - change to new method names and signatures  
+3. **Transform data structures** - convert old interfaces to new ones
+4. **Add missing properties** - ensure mock objects have all required fields
+5. **Handle type unions** - use appropriate type assertions or guards
+6. **Verify storage keys** - match test mocks to actual implementation keys
+7. **Test the behavior** - ensure tests still validate the intended functionality
+
+#### 8. Systematic Test Migration Checklist
+
+- [ ] Update all imports to current module names
+- [ ] Change method calls to new API signatures
+- [ ] Convert data structures to new interfaces
+- [ ] Add required properties to mock objects
+- [ ] Fix union type property access
+- [ ] Update storage keys and constants
+- [ ] Verify test logic still matches intended behavior
+- [ ] Run tests to confirm all compilation errors are resolved
+- [ ] Validate that tests actually test the right functionality
+
 ## Build Requirements for AI Agents
 
 ### Post-Development Validation

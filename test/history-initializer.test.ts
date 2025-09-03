@@ -64,6 +64,8 @@ describe('HistoryInitializer', () => {
 
     mockErrorManager = {
       addError: jest.fn(),
+      addHistoryInitializationError: jest.fn(),
+      addPermissionError: jest.fn(),
       getErrors: jest.fn(),
       clearErrors: jest.fn(),
       displayErrors: jest.fn(),
@@ -133,8 +135,9 @@ describe('HistoryInitializer', () => {
 
       await historyInitializer.initialize();
 
-      expect(mockErrorManager.addError).toHaveBeenCalledWith(
-        'Chrome history API is not available - skipping history initialization'
+      expect(mockErrorManager.addHistoryInitializationError).toHaveBeenCalledWith(
+        'Chrome history API is not available - skipping history initialization',
+        'api_check'
       );
     });
 
@@ -149,8 +152,9 @@ describe('HistoryInitializer', () => {
 
       await historyInitializer.initialize();
 
-      expect(mockErrorManager.addError).toHaveBeenCalledWith(
-        expect.stringContaining('History initialization failed')
+      expect(mockErrorManager.addHistoryInitializationError).toHaveBeenCalledWith(
+        expect.stringContaining('History initialization failed'),
+        'general'
       );
       expect(mockInitializationStateManager.markPartialCompletion).toHaveBeenCalledWith(
         0,
@@ -574,8 +578,9 @@ describe('HistoryInitializer', () => {
           (historyInitializer as any).integrateAndSaveHistoryData(historyData)
         ).rejects.toThrow('Storage error');
 
-        expect(mockErrorManager.addError).toHaveBeenCalledWith(
-          expect.stringContaining('Failed to integrate history data')
+        expect(mockErrorManager.addHistoryInitializationError).toHaveBeenCalledWith(
+          expect.stringContaining('Failed to integrate history data'),
+          'integration'
         );
       });
     });
@@ -595,8 +600,9 @@ describe('HistoryInitializer', () => {
         await (historyInitializer as any).saveWithRetry(testData);
 
         expect(mockVisitStorageManager.saveVisitData).toHaveBeenCalledTimes(2);
-        expect(mockErrorManager.addError).toHaveBeenCalledWith(
-          expect.stringContaining('Storage quota exceeded during history initialization')
+        expect(mockErrorManager.addHistoryInitializationError).toHaveBeenCalledWith(
+          expect.stringContaining('Storage quota exceeded during history initialization'),
+          'storage'
         );
       });
 
@@ -726,8 +732,9 @@ describe('HistoryInitializer', () => {
 
         await historyInitializer.processHistoryItems(mockHistoryItems);
 
-        expect(mockErrorManager.addError).toHaveBeenCalledWith(
-          expect.stringContaining('High error rate during history processing')
+        expect(mockErrorManager.addHistoryInitializationError).toHaveBeenCalledWith(
+          expect.stringContaining('High error rate during history processing'),
+          'processing'
         );
 
         // Restore original method
