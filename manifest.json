@@ -1,9 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "Tidy Tabs",
+  "name": "Y-Nav",
   "version": "1.0.3",
-  "description": "A Chrome extension to sort your tabs, remove duplicates, and merge windows",
-  "permissions": ["tabs", "activeTab", "bookmarks", "storage", "favicon", "history"],
+  "description": "Smart browser navigation: manage tabs, search bookmarks & history with intelligent ranking",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "bookmarks",
+    "storage",
+    "favicon",
+    "history"
+  ],
   "commands": {
     "_execute_action": {
       "suggested_key": {
@@ -29,4 +36,4 @@
   "background": {
     "service_worker": "background.js"
   }
-} 
+}

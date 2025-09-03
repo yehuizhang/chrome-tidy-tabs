@@ -52,14 +52,30 @@ npm run test:watch                          # Run tests in watch mode
 npx jest --testPathPatterns="test/specific" # Run specific test files
 npx jest --testNamePattern="pattern"        # Run tests matching name pattern
 npx jest --coverage                         # Run tests with coverage report
-zip -r tidy_tabs.zip src manifest.json     # Package for Chrome Store
+zip -r y_nav.zip src manifest.json     # Package for Chrome Store
 ```
 
 ## Chrome Extension Specifics
 
-- Uses Manifest V3 with required permissions: tabs, activeTab, bookmarks, storage
-- Popup-based UI with keyboard shortcuts
-- Chrome APIs: tabs, bookmarks, windows, storage
+### Manifest V3 Architecture
+- **Service Worker**: Background script for continuous visit tracking
+- **Required Permissions**: tabs, activeTab, bookmarks, storage
+- **Optional Permissions**: history (requested dynamically for initialization)
+- **Popup-based UI**: Main interface with keyboard shortcuts
+
+### Chrome APIs Used
+- **chrome.tabs**: Tab management, visit tracking, and navigation
+- **chrome.bookmarks**: Bookmark search and access
+- **chrome.windows**: Window management for merge operations
+- **chrome.storage**: Data persistence (local and sync)
+- **chrome.history**: Optional history initialization
+- **chrome.permissions**: Dynamic permission requests
+
+### Extension Features
+- **Background Processing**: Continuous visit tracking via service worker
+- **Dynamic Permissions**: Runtime permission requests for optional features
+- **Storage Management**: Local storage with sync capabilities and quota management
+- **Error Recovery**: Graceful degradation when APIs are unavailable
 
 ## Testing Framework
 
@@ -168,7 +184,7 @@ When tests fail due to API changes or refactoring, follow these specific pattern
 
 **Common Issue**: Tests use old storage keys that don't match implementation
 - **Pattern**: Tests pass but data isn't loaded correctly
-- **Solution**: Update mock storage keys to match current implementation (e.g., `webpage_click_data` → `tidy_tabs_click_data`)
+- **Solution**: Update mock storage keys to match current implementation (e.g., `webpage_click_data` → `y_nav_click_data`)
 - **Check**: Look at the actual storage manager constants
 
 #### 7. Test Adaptation Strategy
@@ -213,3 +229,62 @@ When adapting tests to evolved APIs:
 - Use TypeScript strict typing throughout
 - Maintain separation of concerns across modules
 - Write self-documenting code with clear variable and function names
+
+## Advanced Features & Components
+
+### Visit Tracking System
+- **Automatic URL Detection**: Background script monitors tab changes and page loads
+- **Data Normalization**: URL cleanup to remove query parameters and fragments
+- **Storage Optimization**: Efficient data structures with automatic cleanup
+- **Cross-session Persistence**: Data maintained across browser restarts
+
+### Search Enhancement
+- **Unified Search**: Combines bookmarks and visit data in single interface
+- **Fuzzy Matching**: Fuse.js integration for flexible search queries
+- **Personalized Ranking**: Visit frequency influences search result ordering
+- **Real-time Updates**: Search results update as user types
+
+### Error Management
+- **Centralized Handling**: Single error manager for consistent user experience
+- **Graceful Degradation**: Fallback modes when Chrome APIs are limited
+- **User Feedback**: Clear error messages with actionable guidance
+- **Recovery Mechanisms**: Automatic retry with exponential backoff
+
+### Performance Optimization
+- **Batch Processing**: Large operations handled in chunks to avoid UI blocking
+- **Memory Management**: Efficient data structures and cleanup strategies
+- **Storage Quota**: Automatic cleanup when storage limits are approached
+- **Async Operations**: Non-blocking operations with proper error handling
+
+## Data Models & Storage
+
+### Storage Keys
+- `y_nav_visit_data`: Visit tracking data with counts and timestamps
+- `y_nav_visit_data_version`: Data format version for migrations
+- `y_nav_history_init_state`: History initialization status
+- `y_nav_errors`: Error messages (localStorage for UI display)
+
+### Data Structures
+```typescript
+interface IVisitData {
+  [normalizedUrl: string]: {
+    count: number;           // Visit frequency
+    lastVisited: number;     // Timestamp of last visit
+    title?: string;          // Page title for search
+  };
+}
+
+interface IUnifiedSearchResult {
+  item: IBookmarkTreeNode | IVisitSearchResult;
+  score: number;
+  type: 'bookmark' | 'visit';
+  visitCount?: number;
+  finalScore?: number;
+}
+```
+
+### Storage Management
+- **Primary Storage**: chrome.storage.local for visit data
+- **Fallback Mode**: Memory-only operation when storage unavailable
+- **Data Validation**: Comprehensive validation and cleanup
+- **Quota Management**: Automatic cleanup of oldest entries when needed
