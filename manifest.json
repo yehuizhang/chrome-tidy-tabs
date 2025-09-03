@@ -1,20 +1,39 @@
 {
   "manifest_version": 3,
-  "name": "Tidy Tabs",
-  "version": "1.0.2",
-  "description": "A Chrome extension to sort your tabs, remove duplicates, and merge windows",
-  "permissions": ["tabs"],
+  "name": "Y-Nav",
+  "version": "1.0.3",
+  "description": "Smart browser navigation: manage tabs, search bookmarks & history with intelligent ranking",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "bookmarks",
+    "storage",
+    "favicon",
+    "history"
+  ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+B",
+        "mac": "MacCtrl+Shift+B"
+      },
+      "description": "Activate the extension"
+    }
+  },
   "action": {
-    "default_popup": "src/popup.html",
+    "default_popup": "popup.html",
     "default_icon": {
-      "16": "src/icons/tidy-tab-16.png",
-      "48": "src/icons/tidy-tab-48.png",
-      "128": "src/icons/tidy-tab-128.png"
+      "16": "assets/tidy-tab-16.png",
+      "48": "assets/tidy-tab-48.png",
+      "128": "assets/tidy-tab-128.png"
     }
   },
   "icons": {
-    "16": "src/icons/tidy-tab-16.png",
-    "48": "src/icons/tidy-tab-48.png",
-    "128": "src/icons/tidy-tab-128.png"
+    "16": "assets/tidy-tab-16.png",
+    "48": "assets/tidy-tab-48.png",
+    "128": "assets/tidy-tab-128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
   }
-} 
+}

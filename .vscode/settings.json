@@ -1,0 +1,9 @@
+{
+    "kiroAgent.configureMCP": "Disabled",
+    "editor.fontSize": 14,
+    "kiroAgent.trustedCommands": [
+        "npm *",
+        "node *",
+        "npx *"
+    ]
+}

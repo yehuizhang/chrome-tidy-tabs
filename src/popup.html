@@ -1,26 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <title>Tab Sorter</title>
-  <link rel="stylesheet" type="text/css" href="styles.css">
-</head>
-<body>
-  <div class="container">
-    <div class="button-container">
-      <button id="sortTabs">
-        <img src="icons/sort-128.png" alt="Sort">
-        <span>Sort</span>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <div class="tab-tooling-container">
+      <button id="sortTabs" class="icon-button" data-tooltip="Sort">
+        <img src="assets/sort-128.png" alt="Sort" />
       </button>
-      <button id="removeDuplicates">
-        <img src="icons/deduplicate-128.png" alt="De-Duplicate">
-        <span>De-Duplicate</span>
+      <button id="deDuplicates" class="icon-button" data-tooltip="De-Duplicate">
+        <img src="assets/deduplicate-128.png" alt="De-Duplicate" />
       </button>
-      <button id="mergeWindows">
-        <img src="icons/merge-128.png" alt="Merge">
-        <span>Merge</span>
+      <button id="mergeWindows" class="icon-button" data-tooltip="Merge">
+        <img src="assets/merge-128.png" alt="Merge" />
       </button>
     </div>
-  </div>
-  <script src="popup.js"></script>
-</body>
+
+    <div class="search-container">
+      <input
+        type="text"
+        id="searchBox"
+        placeholder="Search bookmarks..."
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="search-results-container">
+      <div id="search-result"></div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
 </html>
