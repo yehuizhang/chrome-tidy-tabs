@@ -16,7 +16,8 @@
     "format": "prettier --write src/**/*.{ts,html,css}",
     "format:check": "prettier --check src/**/*.{ts,html,css}",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "zip": "cd dist && zip -r ../y-nav-extension.zip . -x '*.DS_Store' '*/.git*'"
   },
   "repository": {
     "type": "git",

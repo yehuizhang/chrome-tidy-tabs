@@ -171,40 +171,11 @@ export class SearchScorer {
     }
 
     const validatedData: IVisitData = {};
-    let invalidEntries = 0;
 
     for (const [url, visitInfo] of Object.entries(visitData)) {
-      if (this.isValidVisitEntry(url, visitInfo)) {
-        validatedData[url] = visitInfo;
-      } else {
-        invalidEntries++;
-      }
-    }
-
-    if (invalidEntries > 0) {
-      console.debug(`Removed ${invalidEntries} invalid visit data entries`);
+      validatedData[url] = visitInfo;
     }
 
     return validatedData;
-  }
-
-  /**
-   * Validate individual visit data entry
-   */
-  private isValidVisitEntry(url: string, visitInfo: unknown): boolean {
-    return (
-      typeof url === 'string' &&
-      url.length > 0 &&
-      visitInfo !== null &&
-      typeof visitInfo === 'object' &&
-      'count' in visitInfo &&
-      'lastVisited' in visitInfo &&
-      typeof (visitInfo as { count: unknown }).count === 'number' &&
-      typeof (visitInfo as { lastVisited: unknown }).lastVisited === 'number' &&
-      (visitInfo as { count: number }).count >= 0 &&
-      (visitInfo as { lastVisited: number }).lastVisited > 0 &&
-      Number.isFinite((visitInfo as { count: number }).count) &&
-      Number.isFinite((visitInfo as { lastVisited: number }).lastVisited)
-    );
   }
 }

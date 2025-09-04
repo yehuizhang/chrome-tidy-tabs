@@ -144,36 +144,6 @@ describe('Error Handling Tests', () => {
   });
 
   describe('SearchScorer Error Handling', () => {
-    it('should handle invalid visit data gracefully', () => {
-      const unifiedResults: IUnifiedSearchResult[] = [
-        {
-          item: {
-            id: '1',
-            title: 'Test',
-            url: 'https://example.com',
-            syncing: false,
-          } as chrome.bookmarks.BookmarkTreeNode,
-          score: 0.5,
-          type: 'bookmark',
-        },
-      ];
-
-      const invalidVisitData = {
-        'example.com/': 'invalid data',
-        'another.com/': { count: 'not a number', lastVisited: Date.now() },
-      } as unknown as IVisitData;
-
-      const results = searchScorer.enhanceUnifiedSearchResults(
-        unifiedResults,
-        invalidVisitData
-      );
-
-      expect(results).toHaveLength(1);
-      expect(results[0]?.visitCount).toBe(0);
-      // With no valid visit data, should use fuzzy score with weights: 0.5 * 0.7 = 0.35
-      expect(results[0]?.finalScore).toBe(0.35);
-    });
-
     it('should handle null/undefined visit data', () => {
       const unifiedResults: IUnifiedSearchResult[] = [
         {

@@ -6,6 +6,7 @@ import {
   IErrorManager,
   errorManager as defaultErrorManager,
 } from '../error-manager';
+import { removeUrlParams } from './utils';
 
 // Minimal interfaces for Chrome tab events
 interface TabChangeInfo {
@@ -129,8 +130,8 @@ export class VisitTracker implements IVisitTracker {
     }
 
     try {
-      const normalizedUrl = this.normalizeUrl(url);
-      await this.visitStorageManager.recordVisit(normalizedUrl, title);
+      const urlWithoutParams = removeUrlParams(url);
+      await this.visitStorageManager.recordVisit(urlWithoutParams, title);
     } catch (error) {
       const errorMessage = `Failed to record visit for ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`;
       this.errorManager.addError(errorMessage);
@@ -148,8 +149,8 @@ export class VisitTracker implements IVisitTracker {
     }
 
     try {
-      const normalizedUrl = this.normalizeUrl(url);
-      return this.visitStorageManager.getVisitCount(normalizedUrl);
+      const urlWithoutParams = removeUrlParams(url);
+      return this.visitStorageManager.getVisitCount(urlWithoutParams);
     } catch (error) {
       // Log error but don't add to error manager for this read operation
       // as it could be called frequently and spam the user
@@ -226,35 +227,6 @@ export class VisitTracker implements IVisitTracker {
       return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
     } catch {
       return false;
-    }
-  }
-
-  /**
-   * Normalize URL by removing protocol, www, and trailing slashes
-   * This should match the normalization logic in VisitStorageManager
-   */
-  private normalizeUrl(url: string): string {
-    try {
-      const urlObj = new URL(url);
-      let normalized = urlObj.hostname + urlObj.pathname;
-
-      // Remove www prefix
-      if (normalized.startsWith('www.')) {
-        normalized = normalized.substring(4);
-      }
-
-      // Remove trailing slash
-      if (normalized.endsWith('/') && normalized.length > 1) {
-        normalized = normalized.slice(0, -1);
-      }
-
-      return normalized.toLowerCase();
-    } catch {
-      // If URL parsing fails, return the original URL cleaned up
-      return url
-        .replace(/^https?:\/\/(www\.)?/, '')
-        .replace(/\/$/, '')
-        .toLowerCase();
     }
   }
 }

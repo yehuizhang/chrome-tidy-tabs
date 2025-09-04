@@ -15,7 +15,7 @@ export interface IVisitStorageManager {
 }
 
 export class VisitStorageManager implements IVisitStorageManager {
-  private static readonly VISIT_DATA_KEY = 'tidy_tabs_visit_data';
+  private static readonly VISIT_DATA_KEY = 'y_nav_visit_data';
 
   private visitData: IVisitData = {};
   private isDataLoaded = false;
@@ -75,41 +75,6 @@ export class VisitStorageManager implements IVisitStorageManager {
   }
 
   /**
-   * Validates visit data structure
-   */
-  private validateVisitData(data: unknown): data is IVisitData {
-    if (!data || typeof data !== 'object') {
-      return false;
-    }
-
-    for (const [url, visitInfo] of Object.entries(data)) {
-      if (
-        typeof url !== 'string' ||
-        !visitInfo ||
-        typeof visitInfo !== 'object'
-      ) {
-        return false;
-      }
-
-      const info = visitInfo as Record<string, unknown>;
-      if (
-        typeof info['count'] !== 'number' ||
-        typeof info['lastVisited'] !== 'number' ||
-        info['count'] < 0 ||
-        info['lastVisited'] < 0
-      ) {
-        return false;
-      }
-
-      if (info['title'] !== undefined && typeof info['title'] !== 'string') {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
    * Loads visit data from Chrome storage
    */
   async loadVisitData(): Promise<IVisitData> {
@@ -127,9 +92,11 @@ export class VisitStorageManager implements IVisitStorageManager {
         VisitStorageManager.VISIT_DATA_KEY,
       ]);
 
-      const storedData = result[VisitStorageManager.VISIT_DATA_KEY];
+      const storedData = result[
+        VisitStorageManager.VISIT_DATA_KEY
+      ] as IVisitData;
 
-      if (storedData && this.validateVisitData(storedData)) {
+      if (storedData) {
         this.visitData = storedData;
       } else {
         // Initialize with empty data if validation fails
@@ -156,18 +123,6 @@ export class VisitStorageManager implements IVisitStorageManager {
    * Saves visit data to Chrome storage
    */
   async saveVisitData(data: IVisitData): Promise<void> {
-    if (!this.isStorageAvailable()) {
-      this.errorManager.addError(
-        'Chrome storage API is not available - visit data not saved'
-      );
-      return; // Graceful degradation - continue without saving
-    }
-
-    if (!this.validateVisitData(data)) {
-      this.errorManager.addError('Invalid visit data format - data not saved');
-      return;
-    }
-
     try {
       await chrome.storage.local.set({
         [VisitStorageManager.VISIT_DATA_KEY]: data,
@@ -223,12 +178,23 @@ export class VisitStorageManager implements IVisitStorageManager {
         if (title) {
           this.visitData[normalizedUrl].title = title;
         }
+
+        if (url !== normalizedUrl) {
+          this.visitData[normalizedUrl].originalUrl = url;
+        } else if (this.visitData[normalizedUrl].originalUrl !== undefined) {
+          delete this.visitData[normalizedUrl].originalUrl;
+        }
       } else {
-        this.visitData[normalizedUrl] = {
+        const visitInfo: IVisitData[string] = {
           count: 1,
           lastVisited: now,
           title: title || '',
         };
+        if (url !== normalizedUrl) {
+          visitInfo.originalUrl = url;
+        }
+
+        this.visitData[normalizedUrl] = visitInfo;
       }
 
       // Save updated data

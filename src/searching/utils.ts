@@ -6,6 +6,16 @@ export const escapeHtml = (text: string): string => {
   return div.innerHTML;
 };
 
+export const removeUrlParams = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    return `${urlObj.origin}${urlObj.pathname}`;
+  } catch (err) {
+    console.error(`failed to parse URL: ${url}`, err);
+    return url;
+  }
+};
+
 export const getFaviconUrl = (url: string): string => {
   try {
     const faviconUrl = `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=64`;
@@ -38,9 +48,14 @@ export const flattenBookmarks = (
     return acc;
   }, []);
 
+export const addProtocalToUrl = (url: string) =>
+  url.startsWith('http://') || url.startsWith('https://')
+    ? url
+    : `https://${url}`;
+
 export const normalizeUrl = (url: string): string => {
   try {
-    const urlObj = new URL(url);
+    const urlObj = new URL(addProtocalToUrl(url));
     let normalized = urlObj.hostname;
 
     // Include port if it's not the default port

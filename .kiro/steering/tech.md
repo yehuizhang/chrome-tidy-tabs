@@ -58,12 +58,14 @@ zip -r y_nav.zip src manifest.json     # Package for Chrome Store
 ## Chrome Extension Specifics
 
 ### Manifest V3 Architecture
+
 - **Service Worker**: Background script for continuous visit tracking
 - **Required Permissions**: tabs, activeTab, bookmarks, storage
 - **Optional Permissions**: history (requested dynamically for initialization)
 - **Popup-based UI**: Main interface with keyboard shortcuts
 
 ### Chrome APIs Used
+
 - **chrome.tabs**: Tab management, visit tracking, and navigation
 - **chrome.bookmarks**: Bookmark search and access
 - **chrome.windows**: Window management for merge operations
@@ -72,6 +74,7 @@ zip -r y_nav.zip src manifest.json     # Package for Chrome Store
 - **chrome.permissions**: Dynamic permission requests
 
 ### Extension Features
+
 - **Background Processing**: Continuous visit tracking via service worker
 - **Dynamic Permissions**: Runtime permission requests for optional features
 - **Storage Management**: Local storage with sync capabilities and quota management
@@ -148,6 +151,7 @@ When tests fail due to API changes or refactoring, follow these specific pattern
 #### 1. Import and Interface Mismatches
 
 **Common Issue**: Tests import old interfaces or classes that have been renamed/refactored
+
 - **Pattern**: Look for `Cannot find module` or `does not exist on type` errors
 - **Solution**: Update imports to match current API (e.g., `EnhancedStorageManager` → `StorageManager`)
 - **Check**: Verify the actual class/interface names in the source files
@@ -155,6 +159,7 @@ When tests fail due to API changes or refactoring, follow these specific pattern
 #### 2. Method Signature Changes
 
 **Common Issue**: Tests call methods that have been renamed or have different signatures
+
 - **Pattern**: `Property 'methodName' does not exist on type` errors
 - **Solution**: Update method calls to match current API (e.g., `enhanceSearchResults` → `enhanceUnifiedSearchResults`)
 - **Check**: Read the actual implementation to understand the new method signatures
@@ -162,6 +167,7 @@ When tests fail due to API changes or refactoring, follow these specific pattern
 #### 3. Data Structure Evolution
 
 **Common Issue**: Tests use old data structures that have been replaced
+
 - **Pattern**: Type mismatches between test data and expected interfaces
 - **Solution**: Update test data to match new interfaces (e.g., `IClickData` → `IVisitData`, `lastClicked` → `lastVisited`)
 - **Check**: Compare old and new type definitions to understand the mapping
@@ -169,6 +175,7 @@ When tests fail due to API changes or refactoring, follow these specific pattern
 #### 4. Chrome API Type Requirements
 
 **Common Issue**: Mock objects missing required properties from Chrome types
+
 - **Pattern**: `Property 'syncing' is missing in type` errors for BookmarkTreeNode
 - **Solution**: Add all required properties to mock objects (e.g., `syncing: false`)
 - **Check**: Look at the Chrome types definition to see all required properties
@@ -176,6 +183,7 @@ When tests fail due to API changes or refactoring, follow these specific pattern
 #### 5. Union Type Property Access
 
 **Common Issue**: Accessing properties on union types without proper type guards
+
 - **Pattern**: `Property 'id' does not exist on type 'A | B'` errors
 - **Solution**: Use type assertions `(item as any).id` or proper type guards
 - **Check**: Understand which properties exist on all union members vs. specific ones
@@ -183,6 +191,7 @@ When tests fail due to API changes or refactoring, follow these specific pattern
 #### 6. Storage Key Changes
 
 **Common Issue**: Tests use old storage keys that don't match implementation
+
 - **Pattern**: Tests pass but data isn't loaded correctly
 - **Solution**: Update mock storage keys to match current implementation (e.g., `webpage_click_data` → `y_nav_click_data`)
 - **Check**: Look at the actual storage manager constants
@@ -190,8 +199,9 @@ When tests fail due to API changes or refactoring, follow these specific pattern
 #### 7. Test Adaptation Strategy
 
 When adapting tests to evolved APIs:
+
 1. **Start with compilation errors** - fix imports and type issues first
-2. **Update method calls** - change to new method names and signatures  
+2. **Update method calls** - change to new method names and signatures
 3. **Transform data structures** - convert old interfaces to new ones
 4. **Add missing properties** - ensure mock objects have all required fields
 5. **Handle type unions** - use appropriate type assertions or guards
@@ -225,6 +235,7 @@ When adapting tests to evolved APIs:
 ### Code Quality Standards
 
 - **Concise and elegant code**: Prefer readable, minimal implementations
+- **Avoid unnecessary complexity**: Keep both feature design and implementation logic simple and straightforward - resist over-engineering solutions
 - Follow existing patterns and conventions in the codebase
 - Use TypeScript strict typing throughout
 - Maintain separation of concerns across modules
@@ -233,24 +244,28 @@ When adapting tests to evolved APIs:
 ## Advanced Features & Components
 
 ### Visit Tracking System
+
 - **Automatic URL Detection**: Background script monitors tab changes and page loads
 - **Data Normalization**: URL cleanup to remove query parameters and fragments
 - **Storage Optimization**: Efficient data structures with automatic cleanup
 - **Cross-session Persistence**: Data maintained across browser restarts
 
 ### Search Enhancement
+
 - **Unified Search**: Combines bookmarks and visit data in single interface
 - **Fuzzy Matching**: Fuse.js integration for flexible search queries
 - **Personalized Ranking**: Visit frequency influences search result ordering
 - **Real-time Updates**: Search results update as user types
 
 ### Error Management
+
 - **Centralized Handling**: Single error manager for consistent user experience
 - **Graceful Degradation**: Fallback modes when Chrome APIs are limited
 - **User Feedback**: Clear error messages with actionable guidance
 - **Recovery Mechanisms**: Automatic retry with exponential backoff
 
 ### Performance Optimization
+
 - **Batch Processing**: Large operations handled in chunks to avoid UI blocking
 - **Memory Management**: Efficient data structures and cleanup strategies
 - **Storage Quota**: Automatic cleanup when storage limits are approached
@@ -259,18 +274,20 @@ When adapting tests to evolved APIs:
 ## Data Models & Storage
 
 ### Storage Keys
+
 - `y_nav_visit_data`: Visit tracking data with counts and timestamps
 - `y_nav_visit_data_version`: Data format version for migrations
 - `y_nav_history_init_state`: History initialization status
 - `y_nav_errors`: Error messages (localStorage for UI display)
 
 ### Data Structures
+
 ```typescript
 interface IVisitData {
   [normalizedUrl: string]: {
-    count: number;           // Visit frequency
-    lastVisited: number;     // Timestamp of last visit
-    title?: string;          // Page title for search
+    count: number; // Visit frequency
+    lastVisited: number; // Timestamp of last visit
+    title?: string; // Page title for search
   };
 }
 
@@ -284,6 +301,7 @@ interface IUnifiedSearchResult {
 ```
 
 ### Storage Management
+
 - **Primary Storage**: chrome.storage.local for visit data
 - **Fallback Mode**: Memory-only operation when storage unavailable
 - **Data Validation**: Comprehensive validation and cleanup

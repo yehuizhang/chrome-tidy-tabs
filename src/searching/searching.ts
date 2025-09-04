@@ -9,7 +9,7 @@ import {
 import { SelectionManager } from './selection-manager';
 import { VisitStorageManager } from './visit-storage-manager';
 import { SearchScorer } from './search-scorer';
-import { flattenBookmarks } from './utils';
+import { addProtocalToUrl, flattenBookmarks, removeUrlParams } from './utils';
 import { BookmarkRenderer } from './bookmark-renderer';
 import {
   IErrorManager,
@@ -121,9 +121,10 @@ export class Searching {
       // Convert visit data to searchable format
       for (const [normalizedUrl, visitInfo] of Object.entries(visitData)) {
         if (visitInfo.count > 0) {
+          const displayUrl = visitInfo.originalUrl || normalizedUrl;
           visitSearchResults.push({
-            url: this.denormalizeUrl(normalizedUrl),
-            title: visitInfo.title || normalizedUrl,
+            url: displayUrl,
+            title: visitInfo.title || displayUrl,
             visitCount: visitInfo.count,
             lastVisited: visitInfo.lastVisited,
             type: 'visit',
@@ -151,17 +152,6 @@ export class Searching {
     }
   }
 
-  private denormalizeUrl(normalizedUrl: string): string {
-    // Add https:// protocol if not present
-    if (
-      !normalizedUrl.startsWith('http://') &&
-      !normalizedUrl.startsWith('https://')
-    ) {
-      return `https://${normalizedUrl}`;
-    }
-    return normalizedUrl;
-  }
-
   private setupEventListeners(): void {
     this.searchBox.addEventListener('input', () => {
       const query = this.searchBox.value.trim();
@@ -186,17 +176,17 @@ export class Searching {
         .sort(([, a], [, b]) => b.count - a.count)
         .slice(0, 10); // Show top 10 most visited
 
-      this.filteredBookmarks = visitEntries.map(
-        ([normalizedUrl, data]) =>
-          ({
-            id: `visit_${normalizedUrl}`,
-            title: data.title || normalizedUrl,
-            url: this.denormalizeUrl(normalizedUrl),
-            dateAdded: data.lastVisited,
-            index: 0,
-            parentId: 'visits',
-          }) as IBookmarkTreeNode
-      );
+      this.filteredBookmarks = visitEntries.map(([normalizedUrl, data]) => {
+        const displayUrl = data.originalUrl || normalizedUrl;
+        return {
+          id: `visit_${normalizedUrl}`,
+          title: data.title || displayUrl,
+          url: displayUrl,
+          dateAdded: data.lastVisited,
+          index: 0,
+          parentId: 'visits',
+        } as IBookmarkTreeNode;
+      });
 
       this.selectionManager.reset();
       this.displayBookmarks();
@@ -255,12 +245,12 @@ export class Searching {
       for (const result of bookmarkResults) {
         const bookmark = result.item;
         if (bookmark.url) {
-          const normalizedUrl = this.normalizeUrl(bookmark.url);
+          const urlWithoutParams = removeUrlParams(bookmark.url);
+          const normalizedUrl = this.normalizeUrl(urlWithoutParams);
           seenUrls.add(normalizedUrl);
 
-          const visitCount = this.visitStorageManager.getVisitCount(
-            bookmark.url
-          );
+          const visitCount =
+            this.visitStorageManager.getVisitCount(urlWithoutParams);
           unifiedResults.push({
             item: bookmark,
             score: result.score || 1,
@@ -275,7 +265,9 @@ export class Searching {
         const visitResults = this.visitFuse.search(query);
         for (const result of visitResults) {
           const visitResult = result.item;
-          const normalizedUrl = this.normalizeUrl(visitResult.url);
+          const normalizedUrl = this.normalizeUrl(
+            removeUrlParams(visitResult.url)
+          );
 
           // Skip if we already have this URL from bookmarks (deduplication)
           if (!seenUrls.has(normalizedUrl)) {
@@ -392,12 +384,9 @@ export class Searching {
     if (bookmark?.url) await this.openBookmark(bookmark.url);
   }
 
-  private async openBookmark(url: string): Promise<void> {
+  private async openBookmark(rawUrl: string): Promise<void> {
+    const url = addProtocalToUrl(rawUrl);
     try {
-      if (!chrome?.tabs) {
-        throw new Error('Chrome tabs API is not available');
-      }
-
       // Open bookmark - visit tracking will be handled automatically by the background script
       await chrome.tabs.create({ url });
       window.close();

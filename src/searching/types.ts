@@ -18,13 +18,15 @@ export interface IScoringWeights {
   maxClickBoost: number; // 2.0 (now represents max visit boost)
 }
 
+export interface IVisitDataBody {
+  count: number; // Number of visits
+  lastVisited: number; // Timestamp of last visit
+  title?: string; // Page title for search (optional)
+  originalUrl?: string;
+}
 // Visit tracking interfaces
 export interface IVisitData {
-  [normalizedUrl: string]: {
-    count: number; // Number of visits
-    lastVisited: number; // Timestamp of last visit
-    title?: string; // Page title for search (optional)
-  };
+  [normalizedUrl: string]: IVisitDataBody;
 }
 
 export interface IVisitSearchResult {

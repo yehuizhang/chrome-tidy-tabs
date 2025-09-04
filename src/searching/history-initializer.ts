@@ -17,6 +17,7 @@ import {
   IErrorManager,
   errorManager as defaultErrorManager,
 } from '../error-manager';
+import { removeUrlParams } from './utils';
 
 export interface IHistoryInitializer {
   initialize(
@@ -272,7 +273,7 @@ export class HistoryInitializer implements IHistoryInitializer {
             continue;
           }
 
-          const normalizedUrl = this.normalizeUrl(item.url);
+          const normalizedUrl = this.normalizeUrl(removeUrlParams(item.url));
           const visitCount = Math.max(1, item.visitCount || 1); // Ensure minimum count of 1
           const lastVisited = item.lastVisitTime || Date.now();
           const title = item.title || '';
