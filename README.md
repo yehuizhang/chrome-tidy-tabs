@@ -32,4 +32,5 @@ magick Screenshot-1.png -resize 1280x800 -background white -gravity center -exte
 ## Upcoming features
 
 * a reset button that cleans up local storage and reload everything from bookmarks and history
-* allows user to exclude certain urls to be added to the local storage.
+* allow user to exclude certain urls to be added to the local storage.
+* allow user to configure max results
