@@ -1,6 +1,6 @@
-import { visitTracker } from './searching/visit-tracker';
-import { errorManager } from './error-manager';
-import { HistoryInitializer } from './searching/history-initializer';
+import { visitTracker } from '../searching/visit-tracker';
+import { errorManager } from '../error-manager';
+import { HistoryInitializer } from '../searching/history-initializer';
 
 /**
  * Background script for automatic URL visit tracking and history initialization
@@ -37,14 +37,21 @@ class BackgroundVisitTracker {
       const errorMsg = `Failed to initialize extension: ${error instanceof Error ? error.message : 'Unknown error'}`;
       console.error(errorMsg);
       errorManager.addError(errorMsg);
-      
+
       // Implement graceful degradation - try to start visit tracking even if history init fails
-      console.warn('Attempting to start visit tracking despite initialization errors...');
+      console.warn(
+        'Attempting to start visit tracking despite initialization errors...'
+      );
       try {
         await this.initializeVisitTracking();
       } catch (trackingError) {
-        console.error('Failed to start visit tracking as fallback:', trackingError);
-        errorManager.addError(`Fallback visit tracking failed: ${trackingError instanceof Error ? trackingError.message : 'Unknown error'}`);
+        console.error(
+          'Failed to start visit tracking as fallback:',
+          trackingError
+        );
+        errorManager.addError(
+          `Fallback visit tracking failed: ${trackingError instanceof Error ? trackingError.message : 'Unknown error'}`
+        );
       }
     }
   }
@@ -58,32 +65,42 @@ class BackgroundVisitTracker {
 
       // Check if initialization is needed
       const initNeeded = await this.historyInitializer.isInitializationNeeded();
-      
+
       if (!initNeeded) {
         console.log('History initialization not needed - skipping');
         return;
       }
 
       console.log('Starting history initialization...');
-      
+
       // Perform history initialization with progress tracking
-      const result = await this.historyInitializer.initialize((progress) => {
+      const result = await this.historyInitializer.initialize(progress => {
         // Log progress updates for debugging
         const message = progress.message || `Phase: ${progress.phase}`;
         console.log(`History Init Progress: ${message}`);
-        
-        if (progress.phase === 'processing' && progress.processedItems && progress.totalItems) {
-          const percent = Math.round((progress.processedItems / progress.totalItems) * 100);
-          console.log(`Processing: ${percent}% (${progress.processedItems}/${progress.totalItems})`);
+
+        if (
+          progress.phase === 'processing' &&
+          progress.processedItems &&
+          progress.totalItems
+        ) {
+          const percent = Math.round(
+            (progress.processedItems / progress.totalItems) * 100
+          );
+          console.log(
+            `Processing: ${percent}% (${progress.processedItems}/${progress.totalItems})`
+          );
         }
-        
+
         if (progress.error) {
           console.error(`History Init Error: ${progress.error}`);
         }
       });
-      
+
       if (result.success) {
-        console.log(`History initialization completed successfully: ${result.itemsProcessed} items processed into ${result.uniqueUrls} unique URLs`);
+        console.log(
+          `History initialization completed successfully: ${result.itemsProcessed} items processed into ${result.uniqueUrls} unique URLs`
+        );
       } else {
         const errorMsg = `History initialization failed: ${result.error}`;
         console.error(errorMsg);
@@ -93,9 +110,11 @@ class BackgroundVisitTracker {
       const errorMsg = `History initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
       console.error(errorMsg);
       errorManager.addError(errorMsg);
-      
+
       // Don't throw - allow visit tracking to continue even if history init fails
-      console.warn('Continuing with real-time visit tracking despite history initialization failure');
+      console.warn(
+        'Continuing with real-time visit tracking despite history initialization failure'
+      );
     }
   }
 
@@ -108,18 +127,18 @@ class BackgroundVisitTracker {
 
       // Start visit tracking
       visitTracker.startTracking();
-      
+
       // Verify tracking started successfully
       if (!visitTracker.isTracking()) {
         throw new Error('Visit tracking failed to start');
       }
-      
+
       console.log('Visit tracking initialized successfully');
     } catch (error) {
       const errorMsg = `Failed to initialize visit tracking: ${error instanceof Error ? error.message : 'Unknown error'}`;
       console.error(errorMsg);
       errorManager.addError(errorMsg);
-      
+
       // This is a more critical failure - log warning but don't throw
       console.warn('Extension will continue without automatic visit tracking');
     }
@@ -141,7 +160,9 @@ try {
   backgroundTracker = new BackgroundVisitTracker();
 } catch (error) {
   console.error('Failed to initialize background visit tracker:', error);
-  errorManager.addError(`Background script initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  errorManager.addError(
+    `Background script initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+  );
 }
 
 // Export for testing

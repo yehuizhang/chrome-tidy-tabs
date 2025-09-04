@@ -1,36 +1,44 @@
-import { Searching } from './searching/searching';
-import { TabManagement } from './tab_management';
-import { errorManager } from './error-manager';
+import { Searching } from '../searching/searching';
+import { TabManagement } from '../tab_management';
+import { errorManager } from '../error-manager';
 
 class Popup {
   constructor() {
     try {
       // Initialize error display and clear any stored errors
       errorManager.initializeErrorDisplay();
-      
+
       // Check if Chrome storage is available for graceful degradation
       this.checkStorageAvailability();
-      
+
       // Initialize components with error handling
       this.initializeComponents();
     } catch (error) {
       const errorMsg = `Failed to initialize popup: ${error instanceof Error ? error.message : 'Unknown error'}`;
       console.error(errorMsg);
       errorManager.addError(errorMsg);
-      
+
       // Show error in UI
-      this.showCriticalError('Extension failed to initialize. Please reload the extension.');
+      this.showCriticalError(
+        'Extension failed to initialize. Please reload the extension.'
+      );
     }
   }
 
   private checkStorageAvailability(): void {
     try {
       if (!chrome?.storage?.local) {
-        errorManager.addError('Chrome storage API is not available - some features may not work properly');
-        console.warn('Chrome storage API not available, extension will run with limited functionality');
+        errorManager.addError(
+          'Chrome storage API is not available - some features may not work properly'
+        );
+        console.warn(
+          'Chrome storage API not available, extension will run with limited functionality'
+        );
       }
     } catch {
-      errorManager.addError('Failed to check storage availability - some features may not work properly');
+      errorManager.addError(
+        'Failed to check storage availability - some features may not work properly'
+      );
     }
   }
 
@@ -49,7 +57,7 @@ class Popup {
       const errorMsg = `Failed to initialize search functionality: ${error instanceof Error ? error.message : 'Unknown error'}`;
       console.error(errorMsg);
       errorManager.addError(errorMsg);
-      
+
       // Show fallback UI if search fails to initialize
       this.showSearchFallback();
     }
@@ -99,7 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Failed to initialize popup on DOMContentLoaded:', error);
     // Last resort error handling
     try {
-      errorManager.addError(`Critical initialization failure: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      errorManager.addError(
+        `Critical initialization failure: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
       errorManager.displayErrors();
     } catch (displayError) {
       console.error('Failed to display errors:', displayError);

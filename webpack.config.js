@@ -6,8 +6,8 @@ module.exports = (env, argv) => {
 
   return {
     entry: {
-      popup: './src/popup.ts',
-      background: './src/background.ts'
+      popup: './src/core/popup.ts',
+      background: './src/core/background.ts'
     },
     output: {
       path: path.resolve(__dirname, 'dist'),
@@ -30,11 +30,11 @@ module.exports = (env, argv) => {
       new CopyWebpackPlugin({
         patterns: [
           {
-            from: "src/*.html",
+            from: "src/core/*.html",
             to: "[name][ext]"
           },
           {
-            from: 'src/styles.css',
+            from: 'src/core/styles.css',
             to: 'styles.css'
           },
           {

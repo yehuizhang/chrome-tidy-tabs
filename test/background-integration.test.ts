@@ -34,7 +34,7 @@ const mockChrome = {
 (global as any).chrome = mockChrome;
 (global as any).localStorage = mockLocalStorage;
 
-import { BackgroundVisitTracker } from '../src/background';
+import { BackgroundVisitTracker } from '../src/core/background';
 import { HistoryInitializer } from '../src/searching/history-initializer';
 import { visitTracker } from '../src/searching/visit-tracker';
 import { errorManager } from '../src/error-manager';
