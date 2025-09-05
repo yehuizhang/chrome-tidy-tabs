@@ -220,8 +220,17 @@ h1 {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  display: block;
+  background: #9696fa;
+  border: 1px solid #53ed8b;
+  padding: 1px;
+  box-sizing: border-box;
+}
+
+.search-result-item.selected .search-result-favicon {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .search-result-content {

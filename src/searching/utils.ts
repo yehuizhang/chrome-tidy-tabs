@@ -16,11 +16,11 @@ export const removeUrlParams = (url: string): string => {
 
 export const getFaviconUrl = (url: string): string => {
   try {
-    const faviconUrl = `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=64`;
+    const faviconUrl = `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(url)}&size=32`;
     return faviconUrl;
   } catch (error) {
     console.error('Failed to get FavIcon url for url', url, error);
-    return `data:image/svg+xml;base64,${btoa(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='#ddd'/><text x='8' y='12' text-anchor='middle' font-size='12' fill='#666'>?</text></svg>`)}`;
+    return `data:image/svg+xml;base64,${btoa(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='6' fill='#4285f4'/><text x='8' y='12' text-anchor='middle' font-size='10' fill='white'>●</text></svg>`)}`;
   }
 };
 
