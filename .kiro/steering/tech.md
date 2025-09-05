@@ -52,7 +52,7 @@ npm run test:watch                          # Run tests in watch mode
 npx jest --testPathPatterns="test/specific" # Run specific test files
 npx jest --testNamePattern="pattern"        # Run tests matching name pattern
 npx jest --coverage                         # Run tests with coverage report
-zip -r y_nav.zip src manifest.json     # Package for Chrome Store
+npm run zip                                 # Package extension for Chrome Store
 ```
 
 ## Chrome Extension Specifics
@@ -153,7 +153,7 @@ When tests fail due to API changes or refactoring, follow these specific pattern
 **Common Issue**: Tests import old interfaces or classes that have been renamed/refactored
 
 - **Pattern**: Look for `Cannot find module` or `does not exist on type` errors
-- **Solution**: Update imports to match current API (e.g., `EnhancedStorageManager` → `StorageManager`)
+- **Solution**: Update imports to match current API (e.g., `EnhancedStorageManager` → `StorageController`)
 - **Check**: Verify the actual class/interface names in the source files
 
 #### 2. Method Signature Changes
@@ -241,6 +241,23 @@ When adapting tests to evolved APIs:
 - Maintain separation of concerns across modules
 - Write self-documenting code with clear variable and function names
 
+## Configuration & Constants
+
+### Search Configuration
+
+Defined in `src/utils/constants.ts`:
+
+- `SEARCH_MAX_RESULTS`: Maximum search results to process (20)
+- `SEARCH_MAX_RESULT_TO_DISPLAY`: Maximum results shown in UI (8)
+- `SEARCH_FUSE_RESULT_WEIGHT`: Weight for fuzzy search score (0.7)
+- `SEARCH_VISIT_COUNT_WEIGHT`: Weight for visit count in ranking (0.3)
+- `SEARCH_MAX_CLICK_BOOST`: Maximum boost factor for frequently visited URLs (2.0)
+
+### History Configuration
+
+- `MAX_BROWSER_HISTORY_AGE_IN_DAYS`: Maximum age of history entries to process (365 days)
+- `MAX_BROWSER_HISTORY_COUNT`: Maximum number of history entries to process (1,000,000)
+
 ## Advanced Features & Components
 
 ### Visit Tracking System
@@ -275,27 +292,36 @@ When adapting tests to evolved APIs:
 
 ### Storage Keys
 
-- `y_nav_visit_data`: Visit tracking data with counts and timestamps
-- `y_nav_visit_data_version`: Data format version for migrations
-- `y_nav_history_init_state`: History initialization status
-- `y_nav_errors`: Error messages (localStorage for UI display)
+Defined in `StorageKeys` enum in `src/utils/constants.ts`:
+
+- `VISIT_DATA`: Visit tracking data with counts and timestamps
+- `ERROR_MESSAGES`: Error messages for UI display
+- `EXCLUDED_URLS`: URLs to exclude from tracking and search
 
 ### Data Structures
 
 ```typescript
-interface IVisitData {
-  [normalizedUrl: string]: {
-    count: number; // Visit frequency
-    lastVisited: number; // Timestamp of last visit
-    title?: string; // Page title for search
-  };
+interface IVisitDataBody {
+  count: number; // Number of visits
+  lastVisited: number; // Timestamp of last visit
+  title?: string; // Page title for search (optional)
+  customTitle?: string; // Custom title override
 }
 
-interface IUnifiedSearchResult {
-  item: IBookmarkTreeNode | IVisitSearchResult;
-  score: number;
-  type: 'bookmark' | 'visit';
-  visitCount?: number;
+interface IVisitData {
+  [normalizedUrl: string]: IVisitDataBody;
+}
+
+interface SearchEntry {
+  url: string;
+  title: string;
+  visitCount: number;
+  lastVisited: number;
+}
+
+interface SearchResult {
+  item: SearchEntry;
+  fuseScore: number;
   finalScore?: number;
 }
 ```

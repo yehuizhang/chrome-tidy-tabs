@@ -1,4 +1,4 @@
-import { IBookmarkTreeNode } from './types';
+import { SearchEntry } from '../types';
 
 export class SelectionManager {
   private selectedIndex = -1;
@@ -15,18 +15,16 @@ export class SelectionManager {
     this.selectedIndex = index;
   }
 
-  getSelectedBookmark(
-    bookmarks: IBookmarkTreeNode[]
-  ): IBookmarkTreeNode | null {
+  getSelectedBookmark(searchResults: SearchEntry[]): SearchEntry | null {
     return (
-      (this.selectedIndex >= 0 && this.selectedIndex < bookmarks.length
-        ? bookmarks[this.selectedIndex]
-        : bookmarks[0]) ?? null
+      (this.selectedIndex >= 0 && this.selectedIndex < searchResults.length
+        ? searchResults[this.selectedIndex]
+        : searchResults[0]) ?? null
     );
   }
 
   updateVisualSelection(container: HTMLElement): void {
-    const items = container.querySelectorAll('.bookmark-item');
+    const items = container.querySelectorAll('.search-result-item');
     console.log(
       `updateVisualSelection: found ${items.length} items, selectedIndex: ${this.selectedIndex}`
     );
@@ -48,7 +46,7 @@ export class SelectionManager {
   }
 
   moveWithContainer(direction: number, container: HTMLElement): void {
-    const items = container.querySelectorAll('.bookmark-item');
+    const items = container.querySelectorAll('.search-result-item');
     const itemCount = items.length;
     console.log(
       `moveWithContainer: direction:${direction} itemCount:${itemCount} (from DOM)`

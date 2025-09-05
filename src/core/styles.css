@@ -124,18 +124,18 @@ h1 {
 #searchBox {
   width: 100%;
   padding: 14px 16px;
-  border: 2px solid E8EAED_1;
+  border: 2px solid #e8eaed;
   border-radius: 12px;
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
-  background: FFFFFF_1;
+  background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
 }
 
 #searchBox:focus {
-  border-color: 4285F4_1;
+  border-color: #4285f4;
   box-shadow: 0 2px 12px rgba(66, 133, 244, 0.15);
   transform: translateY(-1px);
 }
@@ -145,7 +145,7 @@ h1 {
   scrollbar-width: thin;
   /* Firefox */
   border-radius: 10px;
-  background: FFFFFF_1;
+  background: #ffffff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
@@ -167,64 +167,73 @@ h1 {
   background: rgba(95, 99, 104, 0.4);
 }
 
-.bookmark-item {
+.search-result-item {
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid F1F3F4_1;
+  border-bottom: 1px solid #f1f3f4;
   cursor: pointer;
   transition: all 0.2s ease;
   gap: 12px;
   position: relative;
 }
 
-.bookmark-item:last-child {
+.search-result-item:last-child {
   border-bottom: none;
   border-radius: 0 0 10px 10px;
 }
 
-.bookmark-item:first-child {
+.search-result-item:first-child {
   border-radius: 10px 10px 0 0;
 }
 
-.bookmark-item:only-child {
+.search-result-item:only-child {
   border-radius: 10px;
 }
 
-.bookmark-item:hover {
-  background: linear-gradient(135deg, F8F9FA_1 0%, E8F0FE_1 100%);
+.search-result-item:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e8f0fe 100%);
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
 }
 
-.bookmark-item:active {
+.search-result-item:active {
   transform: translateX(2px) scale(0.98);
 }
 
-.bookmark-item.selected {
+.search-result-item.selected {
   background: #1a73e8;
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
   border-left: 3px solid #1557b0;
 }
 
-.bookmark-item.selected .bookmark-title {
+.search-result-item.selected .search-result-title {
   color: #ffffff;
 }
 
-.bookmark-item.selected .bookmark-url {
+.search-result-item.selected .search-result-url {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.bookmark-favicon {
+.search-result-favicon {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  display: block;
+  background: #9696fa;
+  border: 1px solid #53ed8b;
+  padding: 1px;
+  box-sizing: border-box;
 }
 
-.bookmark-content {
+.search-result-item.selected .search-result-favicon {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.search-result-content {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -232,9 +241,9 @@ h1 {
   gap: 10px;
 }
 
-.bookmark-title {
+.search-result-title {
   font-weight: 500;
-  color: 202124_1;
+  color: #202124;
   font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
@@ -244,8 +253,8 @@ h1 {
   line-height: 1.4;
 }
 
-.bookmark-url {
-  color: 5F6368_1;
+.search-result-url {
+  color: #5f6368;
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
@@ -258,20 +267,20 @@ h1 {
 
 .no-results {
   text-align: center;
-  color: 5F6368_1;
+  color: #5f6368;
   padding: 40px 20px;
   font-size: 14px;
   border-radius: 10px;
-  background: FFFFFF_1;
+  background: #ffffff;
 }
 
 .loading {
   text-align: center;
-  color: 5F6368_1;
+  color: #5f6368;
   padding: 20px;
   font-size: 14px;
   border-radius: 10px;
-  background: FFFFFF_1;
+  background: #ffffff;
 }
 /* Error display styles */
 .error-container {

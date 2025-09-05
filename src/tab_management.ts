@@ -28,6 +28,12 @@ export class TabManagement {
     sortButton.addEventListener('click', async () => {
       try {
         const tabs = await chrome.tabs.query({ currentWindow: true });
+        
+        if (!tabs || tabs.length === 0) {
+          console.log('No tabs found to sort');
+          return;
+        }
+
         const sortedTabs = tabs.sort((a, b) => {
           const urlA = this.getUrlInfo(a.url || '');
           const urlB = this.getUrlInfo(b.url || '');
@@ -41,12 +47,19 @@ export class TabManagement {
           return 0;
         });
 
+        // Move tabs in reverse order to maintain correct positioning
         for (let i = sortedTabs.length - 1; i >= 0; i--) {
           const tab = sortedTabs[i];
-          if (tab?.id) {
-            await chrome.tabs.move(tab.id, { index: i });
+          if (tab?.id !== undefined) {
+            try {
+              await chrome.tabs.move(tab.id, { index: i });
+            } catch (moveError) {
+              console.error(`Failed to move tab ${tab.id}:`, moveError);
+            }
           }
         }
+        
+        console.log(`Successfully sorted ${sortedTabs.length} tabs`);
       } catch (error) {
         console.error('Error sorting tabs:', error);
       }
@@ -61,19 +74,31 @@ export class TabManagement {
     deDuplicatesButton.addEventListener('click', async () => {
       try {
         const tabs = await chrome.tabs.query({ currentWindow: true });
+        
+        if (!tabs || tabs.length === 0) {
+          console.log('No tabs found to deduplicate');
+          return;
+        }
+
         const seenUrls = new Set<string>();
         const duplicateTabIds: number[] = [];
 
         for (const tab of tabs) {
-          if (tab.url) {
-            if (seenUrls.has(tab.url) && tab.id) {
+          if (tab.url && typeof tab.url === 'string') {
+            if (seenUrls.has(tab.url) && tab.id !== undefined) {
               duplicateTabIds.push(tab.id);
             } else {
               seenUrls.add(tab.url);
             }
           }
         }
-        await chrome.tabs.remove(duplicateTabIds);
+
+        if (duplicateTabIds.length > 0) {
+          await chrome.tabs.remove(duplicateTabIds);
+          console.log(`Removed ${duplicateTabIds.length} duplicate tabs`);
+        } else {
+          console.log('No duplicate tabs found');
+        }
       } catch (error) {
         console.error('Error removing duplicate tabs:', error);
       }
@@ -88,21 +113,37 @@ export class TabManagement {
     mergeWindowsButton.addEventListener('click', async () => {
       try {
         const currentWindow = await chrome.windows.getCurrent();
-        if (!currentWindow.id) return;
+        if (!currentWindow.id) {
+          console.error('Could not get current window ID');
+          return;
+        }
 
         const allTabs = await chrome.tabs.query({});
         const tabsToMove = allTabs.filter(
-          tab => tab.windowId !== currentWindow.id
+          tab => tab.windowId !== currentWindow.id && tab.id !== undefined
         );
 
+        if (tabsToMove.length === 0) {
+          console.log('No tabs from other windows to merge');
+          return;
+        }
+
+        let movedCount = 0;
         for (const tab of tabsToMove) {
-          if (tab.id) {
-            await chrome.tabs.move(tab.id, {
-              windowId: currentWindow.id,
-              index: -1,
-            });
+          if (tab.id !== undefined) {
+            try {
+              await chrome.tabs.move(tab.id, {
+                windowId: currentWindow.id,
+                index: -1,
+              });
+              movedCount++;
+            } catch (moveError) {
+              console.error(`Failed to move tab ${tab.id}:`, moveError);
+            }
           }
         }
+        
+        console.log(`Successfully merged ${movedCount} tabs from other windows`);
       } catch (error) {
         console.error('Error merging windows:', error);
       }
@@ -111,6 +152,10 @@ export class TabManagement {
 
   private getUrlInfo(url: string): UrlInfo {
     try {
+      if (!url || typeof url !== 'string') {
+        return { domain: '', subdomain: '', pathName: '', search: '' };
+      }
+
       const urlObj = new URL(url);
       const hostname = urlObj.hostname.split('.');
 
@@ -119,11 +164,11 @@ export class TabManagement {
           ? `${hostname[hostname.length - 2]}.${hostname[hostname.length - 1]}`
           : urlObj.hostname;
       const subdomain =
-        hostname.length >= 2
+        hostname.length >= 3
           ? hostname.slice(0, hostname.length - 2).join('.')
           : '';
-      const pathName = urlObj.pathname;
-      const search = urlObj.search;
+      const pathName = urlObj.pathname || '';
+      const search = urlObj.search || '';
 
       return {
         domain,
@@ -133,7 +178,7 @@ export class TabManagement {
       };
     } catch (e) {
       console.error('Unable to parse URL:', url, e);
-      return { domain: url, subdomain: '', pathName: '', search: '' };
+      return { domain: url || '', subdomain: '', pathName: '', search: '' };
     }
   }
 }

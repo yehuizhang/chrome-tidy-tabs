@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Y-Nav",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Smart browser navigation: manage tabs, search bookmarks & history with intelligent ranking",
   "permissions": [
     "tabs",
