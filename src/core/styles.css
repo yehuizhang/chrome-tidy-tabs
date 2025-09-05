@@ -124,18 +124,18 @@ h1 {
 #searchBox {
   width: 100%;
   padding: 14px 16px;
-  border: 2px solid E8EAED_1;
+  border: 2px solid #e8eaed;
   border-radius: 12px;
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
-  background: FFFFFF_1;
+  background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
 }
 
 #searchBox:focus {
-  border-color: 4285F4_1;
+  border-color: #4285f4;
   box-shadow: 0 2px 12px rgba(66, 133, 244, 0.15);
   transform: translateY(-1px);
 }
@@ -145,7 +145,7 @@ h1 {
   scrollbar-width: thin;
   /* Firefox */
   border-radius: 10px;
-  background: FFFFFF_1;
+  background: #ffffff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
@@ -171,7 +171,7 @@ h1 {
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid F1F3F4_1;
+  border-bottom: 1px solid #f1f3f4;
   cursor: pointer;
   transition: all 0.2s ease;
   gap: 12px;
@@ -192,7 +192,7 @@ h1 {
 }
 
 .bookmark-item:hover {
-  background: linear-gradient(135deg, F8F9FA_1 0%, E8F0FE_1 100%);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e8f0fe 100%);
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
 }
@@ -234,7 +234,7 @@ h1 {
 
 .bookmark-title {
   font-weight: 500;
-  color: 202124_1;
+  color: #202124;
   font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
@@ -245,7 +245,7 @@ h1 {
 }
 
 .bookmark-url {
-  color: 5F6368_1;
+  color: #5f6368;
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
@@ -258,20 +258,20 @@ h1 {
 
 .no-results {
   text-align: center;
-  color: 5F6368_1;
+  color: #5f6368;
   padding: 40px 20px;
   font-size: 14px;
   border-radius: 10px;
-  background: FFFFFF_1;
+  background: #ffffff;
 }
 
 .loading {
   text-align: center;
-  color: 5F6368_1;
+  color: #5f6368;
   padding: 20px;
   font-size: 14px;
   border-radius: 10px;
-  background: FFFFFF_1;
+  background: #ffffff;
 }
 /* Error display styles */
 .error-container {

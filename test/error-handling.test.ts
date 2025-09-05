@@ -1,4 +1,4 @@
-import { StorageManager } from '../src/searching/storage-manager';
+import { StorageManager } from '../src/storage-controller';
 import { SearchScorer } from '../src/searching/search-scorer';
 import {
   IClickData,

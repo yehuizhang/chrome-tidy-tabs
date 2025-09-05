@@ -153,7 +153,7 @@ When tests fail due to API changes or refactoring, follow these specific pattern
 **Common Issue**: Tests import old interfaces or classes that have been renamed/refactored
 
 - **Pattern**: Look for `Cannot find module` or `does not exist on type` errors
-- **Solution**: Update imports to match current API (e.g., `EnhancedStorageManager` → `StorageManager`)
+- **Solution**: Update imports to match current API (e.g., `EnhancedStorageManager` → `StorageController`)
 - **Check**: Verify the actual class/interface names in the source files
 
 #### 2. Method Signature Changes

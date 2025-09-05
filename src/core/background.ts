@@ -1,169 +1,77 @@
-import { visitTracker } from '../searching/visit-tracker';
-import { errorManager } from '../feature/error-manager';
-import { HistoryInitializer } from '../searching/history-initializer';
+import { StorageController } from '../storage-controller';
+import { timeAsync } from '../utils/performance';
+import { VisitStorageManager } from '../searching/visit-storage-manager';
 
-/**
- * Background script for automatic URL visit tracking and history initialization
- * Initializes history data on first run, then starts real-time visit tracking
- */
-class BackgroundVisitTracker {
-  private historyInitializer: HistoryInitializer;
+chrome.runtime.onInstalled.addListener(async details => {
+  console.log('Extension installed:', details);
+  if (details.reason === 'install') {
+    console.log('Extension installed. Starting setup process...');
 
-  constructor() {
-    this.historyInitializer = new HistoryInitializer();
-    this.initializeExtension();
+    await timeAsync('setup', {}, async () => {
+      const storageController = new StorageController();
+      await storageController.initialize();
+    });
   }
+});
 
-  /**
-   * Initialize the extension with history initialization and visit tracking
-   */
-  private async initializeExtension(): Promise<void> {
-    try {
-      console.log('Starting extension initialization...');
+// Track recent visits to prevent duplicate counting
+const recentVisits = new Map<string, number>();
+const VISIT_DEBOUNCE_TIME = 5000; // 5 seconds
 
-      // Check if Chrome APIs are available
-      if (!chrome?.tabs) {
-        throw new Error('Chrome tabs API is not available');
-      }
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, updatedTab) => {
+  try {
+    if (changeInfo.status === 'complete' && updatedTab.url) {
+      const url = updatedTab.url;
 
-      // Step 1: Initialize history data if needed
-      await this.initializeHistoryData();
-
-      // Step 2: Start real-time visit tracking
-      await this.initializeVisitTracking();
-
-      console.log('Extension initialization completed successfully');
-    } catch (error) {
-      const errorMsg = `Failed to initialize extension: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      console.error(errorMsg);
-      errorManager.addError(errorMsg);
-
-      // Implement graceful degradation - try to start visit tracking even if history init fails
-      console.warn(
-        'Attempting to start visit tracking despite initialization errors...'
-      );
-      try {
-        await this.initializeVisitTracking();
-      } catch (trackingError) {
-        console.error(
-          'Failed to start visit tracking as fallback:',
-          trackingError
-        );
-        errorManager.addError(
-          `Fallback visit tracking failed: ${trackingError instanceof Error ? trackingError.message : 'Unknown error'}`
-        );
-      }
-    }
-  }
-
-  /**
-   * Initialize history data on first run
-   */
-  private async initializeHistoryData(): Promise<void> {
-    try {
-      console.log('Checking if history initialization is needed...');
-
-      // Check if initialization is needed
-      const initNeeded = await this.historyInitializer.isInitializationNeeded();
-
-      if (!initNeeded) {
-        console.log('History initialization not needed - skipping');
+      // Skip chrome internal pages and new tab pages
+      if (
+        url.startsWith('chrome://') ||
+        url.startsWith('chrome-extension://')
+      ) {
         return;
       }
 
-      console.log('Starting history initialization...');
+      // Create a unique key for this visit (tab + url combination)
+      const visitKey = `${tabId}:${url}`;
+      const now = Date.now();
 
-      // Perform history initialization with progress tracking
-      const result = await this.historyInitializer.initialize(progress => {
-        // Log progress updates for debugging
-        const message = progress.message || `Phase: ${progress.phase}`;
-        console.log(`History Init Progress: ${message}`);
+      // Check if we've recently recorded a visit for this tab/url combination
+      const lastVisitTime = recentVisits.get(visitKey);
+      if (lastVisitTime && now - lastVisitTime < VISIT_DEBOUNCE_TIME) {
+        console.log('Skipping duplicate visit recording for:', url);
+        return;
+      }
 
-        if (
-          progress.phase === 'processing' &&
-          progress.processedItems &&
-          progress.totalItems
-        ) {
-          const percent = Math.round(
-            (progress.processedItems / progress.totalItems) * 100
-          );
-          console.log(
-            `Processing: ${percent}% (${progress.processedItems}/${progress.totalItems})`
-          );
-        }
+      // Record this visit time
+      recentVisits.set(visitKey, now);
 
-        if (progress.error) {
-          console.error(`History Init Error: ${progress.error}`);
-        }
+      // Clean up old entries to prevent memory leaks
+      cleanupOldVisits();
+
+      const visitStorageManager = await VisitStorageManager.getInstance();
+      await visitStorageManager.recordVisit(updatedTab.url, updatedTab.title);
+
+      // Save the visit data to storage
+      await visitStorageManager.saveVisitData();
+
+      console.log('Visit recorded and saved:', {
+        url: updatedTab.url,
+        title: updatedTab.title,
       });
+    }
+  } catch (error) {
+    console.error('Failed to record visit:', error);
+  }
+});
 
-      if (result.success) {
-        console.log(
-          `History initialization completed successfully: ${result.itemsProcessed} items processed into ${result.uniqueUrls} unique URLs`
-        );
-      } else {
-        const errorMsg = `History initialization failed: ${result.error}`;
-        console.error(errorMsg);
-        errorManager.addError(errorMsg);
-      }
-    } catch (error) {
-      const errorMsg = `History initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      console.error(errorMsg);
-      errorManager.addError(errorMsg);
+// Simple cleanup function - only removes entries older than debounce time
+function cleanupOldVisits(): void {
+  const now = Date.now();
+  const cutoffTime = now - VISIT_DEBOUNCE_TIME * 2; // Keep entries for twice the debounce time
 
-      // Don't throw - allow visit tracking to continue even if history init fails
-      console.warn(
-        'Continuing with real-time visit tracking despite history initialization failure'
-      );
+  for (const [key, timestamp] of recentVisits.entries()) {
+    if (timestamp < cutoffTime) {
+      recentVisits.delete(key);
     }
   }
-
-  /**
-   * Initialize real-time visit tracking
-   */
-  private async initializeVisitTracking(): Promise<void> {
-    try {
-      console.log('Starting visit tracking...');
-
-      // Start visit tracking
-      visitTracker.startTracking();
-
-      // Verify tracking started successfully
-      if (!visitTracker.isTracking()) {
-        throw new Error('Visit tracking failed to start');
-      }
-
-      console.log('Visit tracking initialized successfully');
-    } catch (error) {
-      const errorMsg = `Failed to initialize visit tracking: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      console.error(errorMsg);
-      errorManager.addError(errorMsg);
-
-      // This is a more critical failure - log warning but don't throw
-      console.warn('Extension will continue without automatic visit tracking');
-    }
-  }
-
-  /**
-   * Get the history initializer instance (for testing)
-   */
-  getHistoryInitializer(): HistoryInitializer {
-    return this.historyInitializer;
-  }
 }
-
-// Initialize the background visit tracker when the script loads
-let backgroundTracker: BackgroundVisitTracker | undefined;
-
-// Auto-initialize the background tracker
-try {
-  backgroundTracker = new BackgroundVisitTracker();
-} catch (error) {
-  console.error('Failed to initialize background visit tracker:', error);
-  errorManager.addError(
-    `Background script initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-  );
-}
-
-// Export for testing
-export { BackgroundVisitTracker, backgroundTracker };

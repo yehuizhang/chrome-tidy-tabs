@@ -3,7 +3,7 @@
  * Tests Chrome storage operations, error handling, and fallback mechanisms
  */
 
-import { StorageManager } from '../src/searching/storage-manager';
+import { StorageManager } from '../src/storage-controller';
 import { IClickData } from '../src/types';
 import { mockChromeStorage } from './setup';
 

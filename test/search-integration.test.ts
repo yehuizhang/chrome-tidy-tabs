@@ -1,5 +1,5 @@
 import { SearchScorer } from '../src/searching/search-scorer';
-import { StorageManager } from '../src/searching/storage-manager';
+import { StorageManager } from '../src/storage-controller';
 import { IBookmarkTreeNode, IUnifiedSearchResult, IClickData, IVisitData } from '../src/types';
 
 // Mock Chrome APIs

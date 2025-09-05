@@ -66,7 +66,6 @@ beforeEach(() => {
   
   // Stop any existing tracking
   if (visitTracker.isTracking()) {
-    visitTracker.stopTracking();
   }
   
   // Reset Chrome API mocks to working state

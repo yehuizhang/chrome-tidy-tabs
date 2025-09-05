@@ -3,17 +3,17 @@ import { KeyboardHandler } from './keyboard-handler';
 import Fuse from 'fuse.js';
 import {
   IBookmarkTreeNode,
-  IVisitSearchResult,
   IUnifiedSearchResult,
+  IVisitSearchEntry,
 } from '../types';
 import { SelectionManager } from './selection-manager';
 import { VisitStorageManager } from './visit-storage-manager';
 import { SearchScorer } from './search-scorer';
-import { addProtocalToUrl, flattenBookmarks, removeUrlParams } from './utils';
+import { addProtocalToUrl } from './utils';
 import { BookmarkRenderer } from './bookmark-renderer';
 import {
-  IErrorManager,
   errorManager as defaultErrorManager,
+  IErrorManager,
 } from '../feature/error-manager';
 
 export class Searching {
@@ -23,18 +23,14 @@ export class Searching {
   private readonly errorManager: IErrorManager;
 
   private readonly selectionManager = new SelectionManager();
-  private readonly visitStorageManager: VisitStorageManager;
+  private visitStorageManager: VisitStorageManager | undefined;
   private readonly searchScorer = new SearchScorer();
 
-  private allBookmarks: IBookmarkTreeNode[] = [];
   private filteredBookmarks: IBookmarkTreeNode[] = [];
-  private fuse: Fuse<IBookmarkTreeNode> | null = null;
-  private visitFuse: Fuse<IVisitSearchResult> | null = null;
+  private fuse: Fuse<IVisitSearchEntry> | null = null;
 
   constructor(errorManager?: IErrorManager) {
     this.errorManager = errorManager || defaultErrorManager;
-    this.visitStorageManager = new VisitStorageManager(this.errorManager);
-
     this.searchBox = document.getElementById('searchBox') as HTMLInputElement;
     this.resultsContainer =
       document.getElementById('search-result') ??
@@ -51,18 +47,10 @@ export class Searching {
   }
 
   private async init(): Promise<void> {
-    try {
-      await this.loadBookmarks();
-    } catch (error) {
-      const errorMsg = `Failed to load bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      this.errorManager.addError(errorMsg);
-      this.showError('Failed to load bookmarks. Please try again.');
-      return;
-    }
+    this.visitStorageManager = await VisitStorageManager.getInstance();
 
     // Load visit data with error handling - don't let this block the UI
     try {
-      await this.visitStorageManager.loadVisitData();
       await this.setupVisitSearch();
     } catch (error) {
       // Don't add to error manager here as VisitStorageManager already handles its errors
@@ -84,56 +72,34 @@ export class Searching {
     }
   }
 
-  private async loadBookmarks(): Promise<void> {
-    try {
-      if (!chrome?.bookmarks) {
-        throw new Error('Chrome bookmarks API is not available');
-      }
-
-      const bookmarkTree = await chrome.bookmarks.getTree();
-      this.allBookmarks = flattenBookmarks(bookmarkTree);
-
-      this.fuse = new Fuse<IBookmarkTreeNode>(this.allBookmarks, {
-        keys: [
-          { name: 'title', weight: 0.7 },
-          { name: 'url', weight: 0.3 },
-        ],
-        threshold: 0.4,
-        distance: 100,
-        minMatchCharLength: 1,
-        includeScore: true,
-        shouldSort: true,
-      });
-
-      console.log('Loaded bookmarks:', this.allBookmarks.length);
-    } catch (error) {
-      const errorMsg = `Error loading bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      this.errorManager.addError(errorMsg);
-      throw error; // Re-throw to be handled by init()
-    }
-  }
-
   private async setupVisitSearch(): Promise<void> {
+    if (!this.visitStorageManager) {
+      return;
+    }
     try {
       const visitData = this.visitStorageManager.getAllVisitData();
-      const visitSearchResults: IVisitSearchResult[] = [];
+      const visitSearchEntries: IVisitSearchEntry[] = [];
 
       // Convert visit data to searchable format
-      for (const [normalizedUrl, visitInfo] of Object.entries(visitData)) {
-        if (visitInfo.count > 0) {
-          const displayUrl = visitInfo.originalUrl || normalizedUrl;
-          visitSearchResults.push({
-            url: displayUrl,
-            title: visitInfo.title || displayUrl,
-            visitCount: visitInfo.count,
-            lastVisited: visitInfo.lastVisited,
-            type: 'visit',
-          });
+      for (const [url, visitInfo] of Object.entries(visitData)) {
+        let title =
+          `${visitInfo.customTitle || ''} | ${visitInfo.title || ''}`.trim();
+        if (title.startsWith('|')) {
+          title = title.substring(1).trim();
         }
+        if (title.endsWith('|')) {
+          title = title.substring(0, title.length - 1).trim();
+        }
+        visitSearchEntries.push({
+          url: url,
+          title: title || url,
+          visitCount: visitInfo.count,
+          lastVisited: visitInfo.lastVisited,
+        });
       }
 
       // Setup Fuse for visit data search
-      this.visitFuse = new Fuse<IVisitSearchResult>(visitSearchResults, {
+      this.fuse = new Fuse<IVisitSearchEntry>(visitSearchEntries, {
         keys: [
           { name: 'title', weight: 0.7 },
           { name: 'url', weight: 0.3 },
@@ -145,7 +111,7 @@ export class Searching {
         shouldSort: true,
       });
 
-      console.log('Loaded visit data for search:', visitSearchResults.length);
+      console.log('Loaded visit data for search:', visitSearchEntries.length);
     } catch (error) {
       console.error('Error setting up visit search:', error);
       // Don't throw - allow search to continue without visit data
@@ -156,10 +122,12 @@ export class Searching {
     this.searchBox.addEventListener('input', () => {
       const query = this.searchBox.value.trim();
       if (query) {
-        this.searchBookmarks(query);
-      } else {
-        this.showMostVisited();
+        this.searchFromStorage(query);
       }
+
+      // else {
+      //   this.showMostVisited();
+      // }
     });
 
     this.searchBox.addEventListener(
@@ -168,39 +136,37 @@ export class Searching {
     );
   }
 
-  private showMostVisited(): void {
-    try {
-      const visitData = this.visitStorageManager.getAllVisitData();
-      const visitEntries = Object.entries(visitData)
-        .filter(([, data]) => data.count > 0)
-        .sort(([, a], [, b]) => b.count - a.count)
-        .slice(0, 10); // Show top 10 most visited
+  // private showMostVisited(): void {
+  //   if (!this.visitStorageManager) {
+  //     return;
+  //   }
+  //   try {
+  //     const visitData = this.visitStorageManager.getAllVisitData();
+  //     const visitEntries = Object.entries(visitData)
+  //       .filter(([, data]) => data.count > 0)
+  //       .sort(([, a], [, b]) => b.count - a.count)
+  //       .slice(0, 10); // Show top 10 most visited
+  //
+  //     this.filteredBookmarks = visitEntries.map(([url, data]) => {
+  //       return {
+  //         id: `visit_${url}`,
+  //         title: data.title || url,
+  //         url: url,
+  //         dateAdded: data.lastVisited,
+  //         index: 0,
+  //         parentId: 'visits',
+  //       } as IBookmarkTreeNode;
+  //     });
+  //
+  //     this.selectionManager.reset();
+  //     this.displayBookmarks();
+  //   } catch (error) {
+  //     console.debug('Failed to show most visited, hiding results:', error);
+  //     this.hideResults();
+  //   }
+  // }
 
-      this.filteredBookmarks = visitEntries.map(([normalizedUrl, data]) => {
-        const displayUrl = data.originalUrl || normalizedUrl;
-        return {
-          id: `visit_${normalizedUrl}`,
-          title: data.title || displayUrl,
-          url: displayUrl,
-          dateAdded: data.lastVisited,
-          index: 0,
-          parentId: 'visits',
-        } as IBookmarkTreeNode;
-      });
-
-      this.selectionManager.reset();
-      this.displayBookmarks();
-    } catch (error) {
-      console.debug('Failed to show most visited, hiding results:', error);
-      this.hideResults();
-    }
-  }
-
-  private searchBookmarks(query: string): void {
-    if (!this.fuse) {
-      throw new Error('unable to search due to bookmark failed to load');
-    }
-
+  private searchFromStorage(query: string): void {
     try {
       // Perform unified search combining bookmarks and visit data
       const unifiedResults = this.performUnifiedSearch(query);
@@ -211,7 +177,7 @@ export class Searching {
           return result.item as IBookmarkTreeNode;
         } else {
           // Convert visit result to bookmark-like structure for display
-          const visitResult = result.item as IVisitSearchResult;
+          const visitResult = result.item as IVisitSearchEntry;
           return {
             id: `visit_${visitResult.url}`,
             title: visitResult.title,
@@ -239,39 +205,23 @@ export class Searching {
     const unifiedResults: IUnifiedSearchResult[] = [];
     const seenUrls = new Set<string>();
 
+    if (!this.visitStorageManager) {
+      console.debug(
+        'Visit storage manager not available, returning empty results'
+      );
+      return unifiedResults;
+    }
+
     try {
-      // Search bookmarks first (higher priority)
-      const bookmarkResults = this.fuse!.search(query);
-      for (const result of bookmarkResults) {
-        const bookmark = result.item;
-        if (bookmark.url) {
-          const urlWithoutParams = removeUrlParams(bookmark.url);
-          const normalizedUrl = this.normalizeUrl(urlWithoutParams);
-          seenUrls.add(normalizedUrl);
-
-          const visitCount =
-            this.visitStorageManager.getVisitCount(urlWithoutParams);
-          unifiedResults.push({
-            item: bookmark,
-            score: result.score || 1,
-            type: 'bookmark',
-            visitCount: visitCount,
-          });
-        }
-      }
-
       // Search visit data if available
-      if (this.visitFuse) {
-        const visitResults = this.visitFuse.search(query);
+      if (this.fuse) {
+        const visitResults = this.fuse.search(query);
         for (const result of visitResults) {
           const visitResult = result.item;
-          const normalizedUrl = this.normalizeUrl(
-            removeUrlParams(visitResult.url)
-          );
 
           // Skip if we already have this URL from bookmarks (deduplication)
-          if (!seenUrls.has(normalizedUrl)) {
-            seenUrls.add(normalizedUrl);
+          if (!seenUrls.has(visitResult.url)) {
+            seenUrls.add(visitResult.url);
             unifiedResults.push({
               item: visitResult,
               score: result.score || 1,
@@ -284,48 +234,14 @@ export class Searching {
 
       // Use SearchScorer to enhance results with proper visit frequency ranking
       const visitData = this.visitStorageManager.getAllVisitData();
-      const enhancedResults = this.searchScorer.enhanceUnifiedSearchResults(
+
+      return this.searchScorer.enhanceUnifiedSearchResults(
         unifiedResults,
         visitData
       );
-
-      return enhancedResults;
     } catch (error) {
-      console.error('Unified search failed:', error);
-      // Fallback to bookmark-only search
-      const bookmarkResults = this.fuse!.search(query);
-      return bookmarkResults.map(result => ({
-        item: result.item,
-        score: result.score || 1,
-        type: 'bookmark' as const,
-        visitCount: 0,
-        finalScore: result.score || 1,
-      }));
-    }
-  }
-
-  private normalizeUrl(url: string): string {
-    try {
-      const urlObj = new URL(url);
-      let normalized = urlObj.hostname + urlObj.pathname;
-
-      // Remove www prefix
-      if (normalized.startsWith('www.')) {
-        normalized = normalized.substring(4);
-      }
-
-      // Remove trailing slash
-      if (normalized.endsWith('/') && normalized.length > 1) {
-        normalized = normalized.slice(0, -1);
-      }
-
-      return normalized.toLowerCase();
-    } catch {
-      // If URL parsing fails, return the original URL cleaned up
-      return url
-        .replace(/^https?:\/\/(www\.)?/, '')
-        .replace(/\/$/, '')
-        .toLowerCase();
+      console.error('Error in unified search:', error);
+      return unifiedResults;
     }
   }
 

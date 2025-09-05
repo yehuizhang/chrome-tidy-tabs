@@ -3,9 +3,8 @@ import {
   IVisitData,
   IUnifiedSearchResult,
   IBookmarkTreeNode,
-  IVisitSearchResult,
+  IVisitSearchEntry,
 } from '../types';
-import { normalizeUrl } from './utils';
 
 export class SearchScorer {
   private readonly weights: IScoringWeights = {
@@ -128,7 +127,7 @@ export class SearchScorer {
       const bookmark = result.item as IBookmarkTreeNode;
       url = bookmark.url;
     } else if (result.type === 'visit') {
-      const visitResult = result.item as IVisitSearchResult;
+      const visitResult = result.item as IVisitSearchEntry;
       url = visitResult.url;
     }
 
@@ -136,8 +135,7 @@ export class SearchScorer {
       return result.visitCount || 0;
     }
 
-    const normalizedUrl = normalizeUrl(url);
-    return visitData[normalizedUrl]?.count || result.visitCount || 0;
+    return visitData[url]?.count || result.visitCount || 0;
   }
 
   /**

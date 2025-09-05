@@ -32,8 +32,8 @@
 - **keyboard-handler.ts**: Keyboard navigation and shortcuts
 - **selection-manager.ts**: UI selection state management
 - **visit-tracker.ts**: Automatic URL visit detection and recording
-- **visit-storage-manager.ts**: Data persistence and retrieval
-- **storage-manager.ts**: Enhanced storage operations with error handling
+- **visit-storage-controller.ts**: Data persistence and retrieval
+- **storage-controller.ts**: Enhanced storage operations with error handling
 - **history-initializer.ts**: First-run history data population
 - **initialization-state-manager.ts**: Initialization progress tracking
 - **progress-display-manager.ts**: User feedback during long operations

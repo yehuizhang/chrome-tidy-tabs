@@ -22,23 +22,22 @@ export interface IVisitDataBody {
   count: number; // Number of visits
   lastVisited: number; // Timestamp of last visit
   title?: string; // Page title for search (optional)
-  originalUrl?: string;
+  customTitle?: string;
 }
 // Visit tracking interfaces
 export interface IVisitData {
   [normalizedUrl: string]: IVisitDataBody;
 }
 
-export interface IVisitSearchResult {
+export interface IVisitSearchEntry {
   url: string;
   title: string;
   visitCount: number;
   lastVisited: number;
-  type: 'visit';
 }
 
 export interface IUnifiedSearchResult {
-  item: IBookmarkTreeNode | IVisitSearchResult;
+  item: IBookmarkTreeNode | IVisitSearchEntry;
   score: number;
   type: 'bookmark' | 'visit';
   visitCount?: number;
