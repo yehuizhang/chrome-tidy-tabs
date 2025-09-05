@@ -4,7 +4,15 @@
 
 ```
 ├── src/                    # Source code
+│   ├── core/               # Core extension components (popup, background, styles)
+│   ├── feature/            # Feature-specific modules (error management, URL exclusion)
 │   ├── searching/          # Search system components
+│   ├── ui/                 # User interface components
+│   ├── utils/              # Utility functions and constants
+│   ├── error_handling.ts   # Error handling utilities
+│   ├── storage-controller.ts # Storage operations
+│   ├── tab_management.ts   # Tab management operations
+│   └── types.ts            # TypeScript type definitions
 ├── assets/                 # Extension icons (16px, 48px, 128px)
 ├── dist/                   # Build output (generated)
 ├── archive/                # Legacy assets and screenshots
@@ -15,31 +23,42 @@
 
 ## Source Code Organization (`src/`)
 
-### Core Files
+### Core Module (`src/core/`)
 
 - **popup.html**: Extension popup UI template
 - **popup.ts**: Main application entry point and UI coordinator
 - **background.ts**: Service worker for continuous visit tracking
-- **styles.css**: UI styling
+- **styles.css**: UI styling and visual components
+
+### Root Level Files
+
 - **tab_management.ts**: Tab operations (sort, dedupe, merge)
-- **error-manager.ts**: Centralized error handling and user feedback
+- **storage-controller.ts**: Enhanced storage operations with error handling
 - **error_handling.ts**: Error handling utilities
+- **types.ts**: TypeScript interfaces and type definitions
+
+### Feature Module (`src/feature/`)
+
+- **error-manager.ts**: Centralized error handling and user feedback
+- **url-exclusion.ts**: URL filtering and exclusion logic
 
 ### Search System (`src/searching/`)
 
 - **searching.ts**: Main search coordinator and unified search engine
-- **bookmark-renderer.ts**: Bookmark display and rendering logic
 - **keyboard-handler.ts**: Keyboard navigation and shortcuts
 - **selection-manager.ts**: UI selection state management
-- **visit-tracker.ts**: Automatic URL visit detection and recording
-- **visit-storage-controller.ts**: Data persistence and retrieval
-- **storage-controller.ts**: Enhanced storage operations with error handling
-- **history-initializer.ts**: First-run history data population
-- **initialization-state-manager.ts**: Initialization progress tracking
-- **progress-display-manager.ts**: User feedback during long operations
-- **search-scorer.ts**: Search ranking and scoring algorithms
-- **types.ts**: TypeScript interfaces and type definitions
+- **visit-storage-manager.ts**: Visit data persistence and retrieval
+- **search-rank.ts**: Search ranking and scoring algorithms
 - **utils.ts**: Utility functions (HTML escaping, URL handling, favicon)
+
+### UI Module (`src/ui/`)
+
+- **search-result-renderer.ts**: Search result display and rendering logic
+
+### Utils Module (`src/utils/`)
+
+- **constants.ts**: Application constants and configuration values
+- **performance.ts**: Performance monitoring and optimization utilities
 
 ### Test Organization (`test/`)
 
@@ -92,33 +111,66 @@ User Input → Popup Interface → Search Engine → Storage Manager → Chrome 
 ### Component Structure
 
 ```typescript
-interface IComponent {
-  initialize(): Promise<void>;
-  cleanup(): Promise<void>;
-  // Component-specific methods
+// Interface-driven design with dependency injection
+interface IErrorManager {
+  addError(message: string): void;
+  getErrors(): string[];
+  clearErrors(): void;
+  displayErrors(): void;
 }
 
-class Component implements IComponent {
-  constructor(private dependencies: IDependencies) {}
-  // Implementation
+class Component {
+  constructor(private errorManager?: IErrorManager) {
+    this.errorManager = errorManager || defaultErrorManager;
+  }
+  // Implementation with error handling
 }
 ```
 
+### Modular Architecture Patterns
+
+- **Feature Modules**: Self-contained modules in `src/feature/` for specific functionality
+- **UI Separation**: UI components isolated in `src/ui/` module
+- **Utility Centralization**: Common utilities and constants in `src/utils/`
+- **Core Isolation**: Essential extension components in `src/core/`
+
 ### Storage Key Conventions
 
-- **Namespace Prefix**: All keys prefixed with `y_nav_`
-- **Descriptive Names**: Clear indication of data purpose
-- **Version Management**: Data format versioning for migrations
+- **Enum-based Keys**: Storage keys defined in `StorageKeys` enum in `src/utils/constants.ts`
+- **Descriptive Names**: Clear indication of data purpose (e.g., `VISIT_DATA`, `ERROR_MESSAGES`, `EXCLUDED_URLS`)
+- **Centralized Management**: All storage keys managed through constants file
 
 ### Error Handling Patterns
 
 ```typescript
-try {
-  await operation();
-} catch (error) {
-  this.errorManager.addError(`Operation failed: ${error.message}`);
-  // Graceful fallback
+import { errorManager as defaultErrorManager, IErrorManager } from '../feature/error-manager';
+
+class Component {
+  constructor(private errorManager?: IErrorManager) {
+    this.errorManager = errorManager || defaultErrorManager;
+  }
+
+  async performOperation(): Promise<void> {
+    try {
+      await operation();
+    } catch (error) {
+      this.errorManager.addError(`Operation failed: ${error.message}`);
+      // Graceful fallback
+    }
+  }
 }
+```
+
+### Storage Key Management
+
+```typescript
+import { StorageKeys } from '../utils/constants';
+
+// Use enum-based storage keys
+await chrome.storage.local.set({
+  [StorageKeys.VISIT_DATA]: visitData,
+  [StorageKeys.ERROR_MESSAGES]: errors
+});
 ```
 
 ## Build Output Structure

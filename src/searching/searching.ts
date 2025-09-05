@@ -197,7 +197,7 @@ export class Searching {
 
   private attachEventListeners(): void {
     this.resultsContainer
-      .querySelectorAll('.bookmark-item')
+      .querySelectorAll('.search-result-item')
       .forEach((item, index) => {
         item.addEventListener('click', async () => {
           const url = item.getAttribute('data-url');

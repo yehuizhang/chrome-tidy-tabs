@@ -24,7 +24,7 @@ export class SelectionManager {
   }
 
   updateVisualSelection(container: HTMLElement): void {
-    const items = container.querySelectorAll('.bookmark-item');
+    const items = container.querySelectorAll('.search-result-item');
     console.log(
       `updateVisualSelection: found ${items.length} items, selectedIndex: ${this.selectedIndex}`
     );
@@ -46,7 +46,7 @@ export class SelectionManager {
   }
 
   moveWithContainer(direction: number, container: HTMLElement): void {
-    const items = container.querySelectorAll('.bookmark-item');
+    const items = container.querySelectorAll('.search-result-item');
     const itemCount = items.length;
     console.log(
       `moveWithContainer: direction:${direction} itemCount:${itemCount} (from DOM)`
