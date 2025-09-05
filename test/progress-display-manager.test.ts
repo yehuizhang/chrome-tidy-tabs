@@ -1,5 +1,5 @@
 import { ProgressDisplayManager } from '../src/searching/progress-display-manager';
-import { IHistoryInitializationProgress } from '../src/searching/types';
+import { IHistoryInitializationProgress } from '../src/types';
 
 // Simple DOM mock with working createElement for escapeHtml
 const createMockElement = () => ({

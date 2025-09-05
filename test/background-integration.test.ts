@@ -37,7 +37,7 @@ const mockChrome = {
 import { BackgroundVisitTracker } from '../src/core/background';
 import { HistoryInitializer } from '../src/searching/history-initializer';
 import { visitTracker } from '../src/searching/visit-tracker';
-import { errorManager } from '../src/error-manager';
+import { errorManager } from '../src/feature/error-manager';
 
 
 

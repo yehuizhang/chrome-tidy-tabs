@@ -77,3 +77,8 @@ export interface IHistoryInitializationResult {
   skippedItems?: number;
   processingTimeMs?: number;
 }
+
+export interface ExclusionRule {
+  urls: string[];
+  lastUpdated: number;
+}

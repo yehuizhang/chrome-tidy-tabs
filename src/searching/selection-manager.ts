@@ -1,4 +1,4 @@
-import { IBookmarkTreeNode } from './types';
+import { IBookmarkTreeNode } from '../types';
 
 export class SelectionManager {
   private selectedIndex = -1;

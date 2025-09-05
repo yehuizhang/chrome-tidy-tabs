@@ -4,7 +4,7 @@ import {
   IUnifiedSearchResult,
   IBookmarkTreeNode,
   IVisitSearchResult,
-} from './types';
+} from '../types';
 import { normalizeUrl } from './utils';
 
 export class SearchScorer {

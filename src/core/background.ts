@@ -1,5 +1,5 @@
 import { visitTracker } from '../searching/visit-tracker';
-import { errorManager } from '../error-manager';
+import { errorManager } from '../feature/error-manager';
 import { HistoryInitializer } from '../searching/history-initializer';
 
 /**

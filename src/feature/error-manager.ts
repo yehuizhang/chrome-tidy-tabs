@@ -1,4 +1,4 @@
-import { escapeHtml } from './searching/utils';
+import { escapeHtml } from '../searching/utils';
 
 /**
  * ErrorManager - Centralized error handling with localStorage persistence
@@ -46,10 +46,10 @@ export class ErrorManager implements IErrorManager {
       return;
     }
 
-    const contextualMessage = phase 
+    const contextualMessage = phase
       ? `History Initialization (${phase}): ${message.trim()}`
       : `History Initialization: ${message.trim()}`;
-    
+
     this.errors.push(contextualMessage);
     this.saveErrorsToStorage();
   }
@@ -90,7 +90,7 @@ export class ErrorManager implements IErrorManager {
    */
   displayErrors(): void {
     const errorContainer = this.getOrCreateErrorContainer();
-    
+
     if (this.errors.length === 0) {
       errorContainer.style.display = 'none';
       return;
@@ -132,7 +132,10 @@ export class ErrorManager implements IErrorManager {
    */
   private saveErrorsToStorage(): void {
     try {
-      localStorage.setItem(ErrorManager.ERROR_STORAGE_KEY, JSON.stringify(this.errors));
+      localStorage.setItem(
+        ErrorManager.ERROR_STORAGE_KEY,
+        JSON.stringify(this.errors)
+      );
     } catch (error) {
       // If we can't save errors, continue without persistence
       console.warn('Failed to save errors to localStorage:', error);
@@ -156,12 +159,12 @@ export class ErrorManager implements IErrorManager {
    */
   private getOrCreateErrorContainer(): HTMLElement {
     let errorContainer = document.getElementById('error-container');
-    
+
     if (!errorContainer) {
       errorContainer = document.createElement('div');
       errorContainer.id = 'error-container';
       errorContainer.className = 'error-container';
-      
+
       // Insert at the top of the popup body
       const body = document.body;
       if (body.firstChild) {
@@ -170,7 +173,7 @@ export class ErrorManager implements IErrorManager {
         body.appendChild(errorContainer);
       }
     }
-    
+
     return errorContainer;
   }
 
@@ -195,8 +198,6 @@ export class ErrorManager implements IErrorManager {
       </div>
     `;
   }
-
-
 }
 
 // Export singleton instance

@@ -1,4 +1,4 @@
-import { IBookmarkTreeNode } from '../src/searching/types';
+import { IBookmarkTreeNode } from '../src/types';
 
 /**
  * Helper function to create mock bookmark nodes with all required properties

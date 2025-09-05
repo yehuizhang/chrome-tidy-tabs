@@ -1,4 +1,4 @@
-import { IHistoryInitializationProgress } from './types';
+import { IHistoryInitializationProgress } from '../types';
 
 // Local HTML escaping function with fallback for test environments
 const escapeHtml = (text: string): string => {

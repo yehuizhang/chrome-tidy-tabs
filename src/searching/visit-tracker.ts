@@ -5,7 +5,7 @@ import {
 import {
   IErrorManager,
   errorManager as defaultErrorManager,
-} from '../error-manager';
+} from '../feature/error-manager';
 import { removeUrlParams } from './utils';
 
 // Minimal interfaces for Chrome tab events

@@ -2,8 +2,8 @@ import { HistoryInitializer, IHistoryInitializer } from '../src/searching/histor
 import { IVisitStorageManager } from '../src/searching/visit-storage-manager';
 import { IInitializationStateManager } from '../src/searching/initialization-state-manager';
 
-import { IErrorManager } from '../src/error-manager';
-import { IVisitData } from '../src/searching/types';
+import { IErrorManager } from '../src/feature/error-manager';
+import { IVisitData } from '../src/types';
 
 // Extend the global chrome mock to include history and permissions APIs
 const mockHistory = {

@@ -1,6 +1,6 @@
 import { SearchScorer } from '../src/searching/search-scorer';
 import { StorageManager } from '../src/searching/storage-manager';
-import { IBookmarkTreeNode, IUnifiedSearchResult, IClickData, IVisitData } from '../src/searching/types';
+import { IBookmarkTreeNode, IUnifiedSearchResult, IClickData, IVisitData } from '../src/types';
 
 // Mock Chrome APIs
 const mockChromeStorage = {

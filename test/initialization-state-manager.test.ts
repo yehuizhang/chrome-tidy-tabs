@@ -1,5 +1,5 @@
 import { InitializationStateManager, IInitializationState } from '../src/searching/initialization-state-manager';
-import { IErrorManager } from '../src/error-manager';
+import { IErrorManager } from '../src/feature/error-manager';
 
 // Mock Chrome API
 const mockChromeStorage = {

@@ -4,7 +4,7 @@ import {
   IClickData,
   IVisitData,
   IUnifiedSearchResult,
-} from '../src/searching/types';
+} from '../src/types';
 
 // Mock Chrome APIs
 const mockChrome = {

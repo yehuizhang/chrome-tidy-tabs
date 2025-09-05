@@ -1,4 +1,4 @@
-import { IBookmarkTreeNode } from './types';
+import { IBookmarkTreeNode } from '../types';
 import { escapeHtml, getFaviconUrl, truncateUrl } from './utils';
 
 export class BookmarkRenderer {

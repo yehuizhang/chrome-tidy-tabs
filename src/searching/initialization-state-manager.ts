@@ -1,7 +1,7 @@
 import {
   IErrorManager,
   errorManager as defaultErrorManager,
-} from '../error-manager';
+} from '../feature/error-manager';
 
 export interface IInitializationState {
   isHistoryInitialized: boolean;

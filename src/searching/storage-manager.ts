@@ -1,9 +1,9 @@
-import { IClickData } from './types';
+import { IClickData } from '../types';
 import { normalizeUrl } from './utils';
 import {
   IErrorManager,
   errorManager as defaultErrorManager,
-} from '../error-manager';
+} from '../feature/error-manager';
 
 export interface IStorageManager {
   loadClickData(): Promise<IClickData>;

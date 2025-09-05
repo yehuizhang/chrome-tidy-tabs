@@ -1,6 +1,6 @@
 import { Searching } from '../searching/searching';
 import { TabManagement } from '../tab_management';
-import { errorManager } from '../error-manager';
+import { errorManager } from '../feature/error-manager';
 
 class Popup {
   constructor() {

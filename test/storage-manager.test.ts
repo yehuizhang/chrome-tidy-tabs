@@ -4,7 +4,7 @@
  */
 
 import { StorageManager } from '../src/searching/storage-manager';
-import { IClickData } from '../src/searching/types';
+import { IClickData } from '../src/types';
 import { mockChromeStorage } from './setup';
 
 // Type augmentation for testing

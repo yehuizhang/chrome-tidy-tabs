@@ -5,7 +5,7 @@ import {
   IBookmarkTreeNode,
   IVisitSearchResult,
   IUnifiedSearchResult,
-} from './types';
+} from '../types';
 import { SelectionManager } from './selection-manager';
 import { VisitStorageManager } from './visit-storage-manager';
 import { SearchScorer } from './search-scorer';
@@ -14,7 +14,7 @@ import { BookmarkRenderer } from './bookmark-renderer';
 import {
   IErrorManager,
   errorManager as defaultErrorManager,
-} from '../error-manager';
+} from '../feature/error-manager';
 
 export class Searching {
   private readonly searchBox: HTMLInputElement;

@@ -1,4 +1,4 @@
-import { IBookmarkTreeNode } from './types';
+import { IBookmarkTreeNode } from '../types';
 
 export const escapeHtml = (text: string): string => {
   const div = document.createElement('div');

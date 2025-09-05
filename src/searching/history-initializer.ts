@@ -3,7 +3,7 @@ import {
   IHistoryInitializationProgress,
   IProgressCallback,
   IHistoryInitializationResult,
-} from './types';
+} from '../types';
 import {
   IVisitStorageManager,
   VisitStorageManager,
@@ -16,7 +16,7 @@ import {
 import {
   IErrorManager,
   errorManager as defaultErrorManager,
-} from '../error-manager';
+} from '../feature/error-manager';
 import { removeUrlParams } from './utils';
 
 export interface IHistoryInitializer {

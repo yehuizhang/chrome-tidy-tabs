@@ -1,8 +1,8 @@
-import { IVisitData } from './types.js';
+import { IVisitData } from '../types';
 import {
   IErrorManager,
   errorManager as defaultErrorManager,
-} from '../error-manager';
+} from '../feature/error-manager';
 
 export interface IVisitStorageManager {
   loadVisitData(): Promise<IVisitData>;

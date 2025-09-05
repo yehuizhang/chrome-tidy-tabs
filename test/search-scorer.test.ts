@@ -1,5 +1,5 @@
 import { SearchScorer } from '../src/searching/search-scorer';
-import { IUnifiedSearchResult, IVisitData } from '../src/searching/types';
+import { IUnifiedSearchResult, IVisitData } from '../src/types';
 
 describe('SearchScorer', () => {
   let scorer: SearchScorer;

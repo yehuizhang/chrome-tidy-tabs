@@ -1,10 +1,10 @@
 import { HistoryInitializer } from '../src/searching/history-initializer';
 import { VisitStorageManager } from '../src/searching/visit-storage-manager';
 import { InitializationStateManager } from '../src/searching/initialization-state-manager';
-import { ErrorManager } from '../src/error-manager';
+import { ErrorManager } from '../src/feature/error-manager';
 import { 
   IProgressCallback
-} from '../src/searching/types';
+} from '../src/types';
 
 // Mock DOM environment
 const mockElement = {
