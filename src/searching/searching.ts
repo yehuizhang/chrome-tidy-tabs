@@ -1,16 +1,12 @@
 import { throwIfNull } from '../error_handling';
 import { KeyboardHandler } from './keyboard-handler';
 import Fuse from 'fuse.js';
-import {
-  IBookmarkTreeNode,
-  IUnifiedSearchResult,
-  IVisitSearchEntry,
-} from '../types';
+import { SearchEntry, SearchResult } from '../types';
 import { SelectionManager } from './selection-manager';
 import { VisitStorageManager } from './visit-storage-manager';
-import { SearchScorer } from './search-scorer';
+import { SearchRank } from './search-rank';
 import { addProtocalToUrl } from './utils';
-import { BookmarkRenderer } from './bookmark-renderer';
+import { SearchResultRenderer } from '../ui/search-result-renderer';
 import {
   errorManager as defaultErrorManager,
   IErrorManager,
@@ -24,10 +20,10 @@ export class Searching {
 
   private readonly selectionManager = new SelectionManager();
   private visitStorageManager: VisitStorageManager | undefined;
-  private readonly searchScorer = new SearchScorer();
+  private readonly searchScorer = new SearchRank();
 
-  private filteredBookmarks: IBookmarkTreeNode[] = [];
-  private fuse: Fuse<IVisitSearchEntry> | null = null;
+  private searchResults: SearchEntry[] = [];
+  private fuse: Fuse<SearchEntry> | null = null;
 
   constructor(errorManager?: IErrorManager) {
     this.errorManager = errorManager || defaultErrorManager;
@@ -37,7 +33,7 @@ export class Searching {
       throwIfNull('search-result cannot be null');
 
     this.keyboardHandler = new KeyboardHandler(
-      () => this.openSelectedBookmark(),
+      () => this.openSelectedItem(),
       () => this.moveSelection(1),
       () => this.moveSelection(-1),
       () => window.close()
@@ -62,7 +58,7 @@ export class Searching {
     }
 
     try {
-      this.setupEventListeners();
+      this.setupSearchInputListener();
       this.hideResults();
       this.searchBox.focus();
     } catch (error) {
@@ -78,7 +74,7 @@ export class Searching {
     }
     try {
       const visitData = this.visitStorageManager.getAllVisitData();
-      const visitSearchEntries: IVisitSearchEntry[] = [];
+      const visitSearchEntries: SearchEntry[] = [];
 
       // Convert visit data to searchable format
       for (const [url, visitInfo] of Object.entries(visitData)) {
@@ -99,12 +95,12 @@ export class Searching {
       }
 
       // Setup Fuse for visit data search
-      this.fuse = new Fuse<IVisitSearchEntry>(visitSearchEntries, {
+      this.fuse = new Fuse<SearchEntry>(visitSearchEntries, {
         keys: [
           { name: 'title', weight: 0.7 },
           { name: 'url', weight: 0.3 },
         ],
-        threshold: 0.4,
+        threshold: 0.4, // score >= 0.4 will be ignored
         distance: 100,
         minMatchCharLength: 1,
         includeScore: true,
@@ -118,13 +114,30 @@ export class Searching {
     }
   }
 
-  private setupEventListeners(): void {
+  private setupSearchInputListener(): void {
     this.searchBox.addEventListener('input', () => {
       const query = this.searchBox.value.trim();
       if (query) {
-        this.searchFromStorage(query);
-      }
+        try {
+          const fuseResults: SearchResult[] = this.fuse!.search(query).map(
+            result => ({
+              item: result.item,
+              fuseScore: result.score || 1,
+            })
+          );
 
+          this.searchResults = this.searchScorer.rankSearchResults(fuseResults);
+          this.selectionManager.reset();
+          this.render();
+        } catch (error) {
+          console.error('Search failed:', error);
+          // Show error but don't break the UI
+          this.showError('Search temporarily unavailable. Please try again.');
+          this.searchResults = [];
+          this.selectionManager.reset();
+          this.render();
+        }
+      }
       // else {
       //   this.showMostVisited();
       // }
@@ -147,7 +160,7 @@ export class Searching {
   //       .sort(([, a], [, b]) => b.count - a.count)
   //       .slice(0, 10); // Show top 10 most visited
   //
-  //     this.filteredBookmarks = visitEntries.map(([url, data]) => {
+  //     this.searchResults = visitEntries.map(([url, data]) => {
   //       return {
   //         id: `visit_${url}`,
   //         title: data.title || url,
@@ -159,102 +172,23 @@ export class Searching {
   //     });
   //
   //     this.selectionManager.reset();
-  //     this.displayBookmarks();
+  //     this.render();
   //   } catch (error) {
   //     console.debug('Failed to show most visited, hiding results:', error);
   //     this.hideResults();
   //   }
   // }
 
-  private searchFromStorage(query: string): void {
-    try {
-      // Perform unified search combining bookmarks and visit data
-      const unifiedResults = this.performUnifiedSearch(query);
-
-      // Extract bookmarks from unified results for display
-      this.filteredBookmarks = unifiedResults.map(result => {
-        if (result.type === 'bookmark') {
-          return result.item as IBookmarkTreeNode;
-        } else {
-          // Convert visit result to bookmark-like structure for display
-          const visitResult = result.item as IVisitSearchEntry;
-          return {
-            id: `visit_${visitResult.url}`,
-            title: visitResult.title,
-            url: visitResult.url,
-            dateAdded: visitResult.lastVisited,
-            index: 0,
-            parentId: 'visits',
-          } as IBookmarkTreeNode;
-        }
-      });
-
-      this.selectionManager.reset();
-      this.displayBookmarks();
-    } catch (error) {
-      console.error('Search failed:', error);
-      // Show error but don't break the UI
-      this.showError('Search temporarily unavailable. Please try again.');
-      this.filteredBookmarks = [];
-      this.selectionManager.reset();
-      this.displayBookmarks();
-    }
-  }
-
-  private performUnifiedSearch(query: string): IUnifiedSearchResult[] {
-    const unifiedResults: IUnifiedSearchResult[] = [];
-    const seenUrls = new Set<string>();
-
-    if (!this.visitStorageManager) {
-      console.debug(
-        'Visit storage manager not available, returning empty results'
-      );
-      return unifiedResults;
-    }
-
-    try {
-      // Search visit data if available
-      if (this.fuse) {
-        const visitResults = this.fuse.search(query);
-        for (const result of visitResults) {
-          const visitResult = result.item;
-
-          // Skip if we already have this URL from bookmarks (deduplication)
-          if (!seenUrls.has(visitResult.url)) {
-            seenUrls.add(visitResult.url);
-            unifiedResults.push({
-              item: visitResult,
-              score: result.score || 1,
-              type: 'visit',
-              visitCount: visitResult.visitCount,
-            });
-          }
-        }
-      }
-
-      // Use SearchScorer to enhance results with proper visit frequency ranking
-      const visitData = this.visitStorageManager.getAllVisitData();
-
-      return this.searchScorer.enhanceUnifiedSearchResults(
-        unifiedResults,
-        visitData
-      );
-    } catch (error) {
-      console.error('Error in unified search:', error);
-      return unifiedResults;
-    }
-  }
-
   private hideResults(): void {
     this.resultsContainer.innerHTML = '';
-    this.filteredBookmarks = [];
+    this.searchResults = [];
     this.selectionManager.reset();
     this.adjustPopupSize();
   }
 
-  private displayBookmarks(): void {
-    this.resultsContainer.innerHTML = BookmarkRenderer.renderBookmarks(
-      this.filteredBookmarks
+  private render(): void {
+    this.resultsContainer.innerHTML = SearchResultRenderer.renderSearchResults(
+      this.searchResults
     );
     this.attachEventListeners();
     this.selectionManager.updateVisualSelection(this.resultsContainer);
@@ -293,9 +227,9 @@ export class Searching {
     this.selectionManager.moveWithContainer(direction, this.resultsContainer);
   }
 
-  private async openSelectedBookmark(): Promise<void> {
+  private async openSelectedItem(): Promise<void> {
     const bookmark = this.selectionManager.getSelectedBookmark(
-      this.filteredBookmarks
+      this.searchResults
     );
     if (bookmark?.url) await this.openBookmark(bookmark.url);
   }

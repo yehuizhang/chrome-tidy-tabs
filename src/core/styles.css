@@ -167,7 +167,7 @@ h1 {
   background: rgba(95, 99, 104, 0.4);
 }
 
-.bookmark-item {
+.search-result-item {
   display: flex;
   align-items: center;
   padding: 12px 16px;
@@ -178,45 +178,45 @@ h1 {
   position: relative;
 }
 
-.bookmark-item:last-child {
+.search-result-item:last-child {
   border-bottom: none;
   border-radius: 0 0 10px 10px;
 }
 
-.bookmark-item:first-child {
+.search-result-item:first-child {
   border-radius: 10px 10px 0 0;
 }
 
-.bookmark-item:only-child {
+.search-result-item:only-child {
   border-radius: 10px;
 }
 
-.bookmark-item:hover {
+.search-result-item:hover {
   background: linear-gradient(135deg, #f8f9fa 0%, #e8f0fe 100%);
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(66, 133, 244, 0.1);
 }
 
-.bookmark-item:active {
+.search-result-item:active {
   transform: translateX(2px) scale(0.98);
 }
 
-.bookmark-item.selected {
+.search-result-item.selected {
   background: #1a73e8;
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
   border-left: 3px solid #1557b0;
 }
 
-.bookmark-item.selected .bookmark-title {
+.search-result-item.selected .search-result-title {
   color: #ffffff;
 }
 
-.bookmark-item.selected .bookmark-url {
+.search-result-item.selected .search-result-url {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.bookmark-favicon {
+.search-result-favicon {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
@@ -224,7 +224,7 @@ h1 {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.bookmark-content {
+.search-result-content {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -232,7 +232,7 @@ h1 {
   gap: 10px;
 }
 
-.bookmark-title {
+.search-result-title {
   font-weight: 500;
   color: #202124;
   font-size: 14px;
@@ -244,7 +244,7 @@ h1 {
   line-height: 1.4;
 }
 
-.bookmark-url {
+.search-result-url {
   color: #5f6368;
   font-size: 12px;
   white-space: nowrap;
